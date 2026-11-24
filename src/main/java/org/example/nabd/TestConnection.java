@@ -5,6 +5,7 @@ import java.sql.*;
 import javafx.application.Application;
 import javafx.stage.Stage;
 
+
 public class TestConnection extends Application {
     private static Stage mainStage;
     private static AdminDashboard adminDashboard;

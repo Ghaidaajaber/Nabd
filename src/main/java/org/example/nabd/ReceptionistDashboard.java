@@ -5,6 +5,9 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.scene.Node;
+import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.collections.ObservableList;
+import javafx.geometry.Pos;
 public class ReceptionistDashboard {
 
     private BorderPane root;
@@ -90,14 +93,11 @@ public class ReceptionistDashboard {
 
             case "Dashboard" -> showDashboard();
 
-            case "Departments" -> setContent(new Label("Departments"));
+            case "Departments" -> showDepartments();
+            case "Doctors" -> showDoctors();
 
-            case "Doctors" -> setContent(new Label("Doctors"));
-
-            case "Patients" -> setContent(new Label("Patients"));
-
-            case "Appointments" -> setContent(new Label("Appointments"));
-        }
+            case "Patients" -> showPatients();
+            case "Appointments" -> showAppointments();        }
     }
     private void showDashboard() {
 
@@ -123,5 +123,310 @@ public class ReceptionistDashboard {
         VBox dashboardContent = new VBox(15, welcome, description);
 
         setContent(dashboardContent);
+    }
+
+    private void showDepartments() {
+
+        pageTitle.setText("Departments");
+
+        Label title = new Label("Departments");
+
+        // Search
+        ComboBox<String> searchBy = new ComboBox<>();
+
+        searchBy.getItems().addAll(
+                "DepartmentID",
+                "DepartmentName",
+                "Location",
+                "Phone"
+        );
+
+        searchBy.setValue("DepartmentName");
+
+        TextField searchField = new TextField();
+        searchField.setPromptText("Search departments...");
+
+        HBox searchBox = new HBox(10, searchBy, searchField);
+        searchBox.setAlignment(Pos.CENTER_LEFT);
+
+
+
+        String[] columnNames = {
+                "Department ID",
+                "Department Name",
+                "Location",
+                "Phone"
+        };
+
+        TableView<ObservableList<String>> table =
+                UIComponents.createTable(columnNames, false);
+
+
+
+        // Load departments
+        HospitalOperations operations = new HospitalOperations();
+
+        table.setItems(operations.getData("Department"));
+
+        UIComponents.setupSearch(
+                table, searchBy, searchField, "Department"
+        );
+
+        VBox page = new VBox(15, title, searchBox, table);
+        page.setPadding(new Insets(20));
+
+        setContent(page);
+    }
+
+    private void showDoctors() {
+
+        pageTitle.setText("Doctors");
+
+        Label title = new Label("Doctors");
+
+        ComboBox<String> searchBy = new ComboBox<>();
+
+        searchBy.getItems().addAll(
+                "DoctorID",
+                "Name",
+                "Specialization",
+                "Phone",
+                "Email",
+                "DepartmentID"
+        );
+
+        searchBy.setValue("Name");
+
+        TextField searchField = new TextField();
+        searchField.setPromptText("Search doctors...");
+
+        HBox searchBox = new HBox(10, searchBy, searchField);
+
+        String[] columnNames = {
+                "Doctor ID",
+                "Full Name",
+                "Specialization",
+                "Phone",
+                "Email",
+                "Department ID"
+        };
+
+        TableView<ObservableList<String>> table =
+                UIComponents.createTable(columnNames, true);
+
+        HospitalOperations operations = new HospitalOperations();
+
+        table.setItems(operations.getData("Doctor"));
+
+        UIComponents.setupSearch(
+                table, searchBy, searchField, "Doctor"
+        );
+
+        VBox page = new VBox(15, title, searchBox, table);
+        page.setPadding(new Insets(20));
+
+        setContent(page);
+    }
+
+    private void showPatients() {
+
+        pageTitle.setText("Patients");
+
+        Label title = new Label("Patients");
+
+        Button addButton = new Button("+ Add Patient");
+
+        addButton.setOnAction(e -> {
+            if (UIComponents.showPatientDialog(null) > 0) {
+                showPatients();
+            }
+        });
+
+        HBox header = new HBox(15, title, addButton);
+        header.setAlignment(Pos.CENTER_LEFT);
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        header.getChildren().add(1, spacer);
+
+        ComboBox<String> searchBy = new ComboBox<>();
+
+        searchBy.getItems().addAll(
+                "PatientID",
+                "Name",
+                "DateOfBirth",
+                "Gender",
+                "Phone",
+                "Email",
+                "Address",
+                "BloodType"
+        );
+
+        searchBy.setValue("Name");
+
+        TextField searchField = new TextField();
+        searchField.setPromptText("Search patients...");
+
+        HBox searchBox = new HBox(10, searchBy, searchField);
+        searchBox.setAlignment(Pos.CENTER_LEFT);
+
+        String[] columnNames = {
+                "Patient ID",
+                "Full Name",
+                "Date of Birth",
+                "Gender",
+                "Phone",
+                "Email",
+                "Address",
+                "Blood Type"
+        };
+
+        TableView<ObservableList<String>> table =
+                UIComponents.createTable(columnNames, true);
+
+        table.getColumns().add(
+                UIComponents.createEditColumn(row -> {
+
+                    if (UIComponents.showPatientDialog(row) > 0) {
+                        showPatients();
+                    }
+
+                })
+        );
+
+        HospitalOperations operations = new HospitalOperations();
+
+        table.setItems(operations.getData("Patient"));
+
+        UIComponents.setupSearch(
+                table, searchBy, searchField, "Patient"
+        );
+
+        VBox page = new VBox(15, header, searchBox, table);
+        page.setPadding(new Insets(20));
+
+        setContent(page);
+    }
+
+    private void showAppointments() {
+
+        pageTitle.setText("Appointments");
+
+        Label title = new Label("Appointments");
+
+        Button addButton = new Button("+ Add Appointment");
+
+        addButton.setOnAction(e ->
+                UIComponents.showAppointmentDialog(
+                        null, this::showAppointments
+                )
+        );
+
+        HBox header = new HBox(15, title, addButton);
+        header.setAlignment(Pos.CENTER_LEFT);
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        header.getChildren().add(1, spacer);
+
+        // Search
+        ComboBox<String> searchBy = new ComboBox<>();
+
+        searchBy.getItems().addAll(
+                "AppointmentID",
+                "PatientName",
+                "DoctorName",
+                "Reason"
+        );
+
+        searchBy.setValue("PatientName");
+
+        TextField searchField = new TextField();
+        searchField.setPromptText("Search appointments...");
+
+        // Status Filter
+        ComboBox<String> statusFilter = new ComboBox<>();
+
+        statusFilter.getItems().addAll(
+                "All Status",
+                "Scheduled",
+                "Completed",
+                "Cancelled"
+        );
+
+        statusFilter.setValue("All Status");
+
+        // Date Filter
+        DatePicker dateFilter = new DatePicker();
+        dateFilter.setPromptText("Date");
+
+        Button clearButton = new Button("Clear Filters");
+
+        HBox searchBox = new HBox(
+                10, searchBy, searchField,
+                statusFilter, dateFilter, clearButton
+        );
+
+        searchBox.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(searchField, Priority.ALWAYS);
+
+        // Table
+        String[] columnNames = {
+                "ID",
+                "Patient",
+                "Doctor",
+                "Date",
+                "Time",
+                "Reason",
+                "Status"
+        };
+
+        TableView<ObservableList<String>> table =
+                UIComponents.createTable(columnNames, false);
+
+        table.getColumns().add(
+                UIComponents.createEditColumn(row ->
+                        UIComponents.showAppointmentDialog(
+                                row, this::showAppointments
+                        )
+                )
+        );
+
+        // Load appointments
+        HospitalOperations operations = new HospitalOperations();
+
+        Runnable refresh = () -> table.setItems(
+                operations.getAppointments(
+                        searchBy.getValue(),
+                        searchField.getText().trim(),
+                        statusFilter.getValue(),
+                        dateFilter.getValue()
+                )
+        );
+
+        searchField.textProperty().addListener(
+                (obs, oldValue, newValue) -> refresh.run()
+        );
+
+        searchBy.setOnAction(e -> refresh.run());
+        statusFilter.setOnAction(e -> refresh.run());
+        dateFilter.setOnAction(e -> refresh.run());
+
+        clearButton.setOnAction(e -> {
+
+            searchBy.setValue("PatientName");
+            searchField.clear();
+            statusFilter.setValue("All Status");
+            dateFilter.setValue(null);
+
+            refresh.run();
+        });
+
+        refresh.run();
+
+        VBox page = new VBox(15, header, searchBox, table);
+        page.setPadding(new Insets(20));
+
+        setContent(page);
     }
 }
