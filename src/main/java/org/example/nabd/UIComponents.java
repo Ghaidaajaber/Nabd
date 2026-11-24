@@ -20,6 +20,13 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import org.example.nabd.TestConnection;
+import javafx.geometry.Insets;
+import javafx.scene.control.Label;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.Priority;
+import javafx.scene.Node;
+import javafx.scene.control.ScrollPane;
 
 public class UIComponents {
 
@@ -1010,6 +1017,56 @@ public class UIComponents {
         );
 
         return button;
+    }
+
+    public static HBox createHeader(Label pageTitle, String role) {
+
+        pageTitle.setStyle(
+                "-fx-font-size: 22px;" +
+                        "-fx-font-weight: bold;" +
+                        "-fx-text-fill: #075D61;"
+        );
+
+        Label roleLabel = new Label(role);
+
+        roleLabel.setStyle(
+                "-fx-font-size: 14px;" +
+                        "-fx-text-fill: #555555;"
+        );
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        HBox header = new HBox(20, pageTitle, spacer, roleLabel);
+
+        header.setAlignment(Pos.CENTER_LEFT);
+        header.setPadding(new Insets(0, 30, 0, 30));
+        header.setPrefHeight(75);
+
+        header.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-border-color: #E5E7EB;" +
+                        "-fx-border-width: 0 0 1 0;"
+        );
+
+        return header;
+    }
+
+    public static ScrollPane createContent(VBox content) {
+
+        content.setPadding(new Insets(30));
+        content.setFillWidth(true);
+
+        ScrollPane scrollPane = new ScrollPane(content);
+
+        scrollPane.setFitToWidth(true);
+
+        scrollPane.setStyle(
+                "-fx-background: #F5F7FA;" +
+                        "-fx-background-color: transparent;"
+        );
+
+        return scrollPane;
     }
 
 
