@@ -968,5 +968,49 @@ public class UIComponents {
         return added[0];
     }
 
+    public static Button menuButton(String text) {
+
+        Button button = new Button(text);
+
+        button.setMaxWidth(Double.MAX_VALUE);
+        button.setPrefHeight(45);
+
+        button.setStyle(
+                "-fx-background-color: transparent;" +
+                        "-fx-text-fill: white;" +
+                        "-fx-font-size: 15px;" +
+                        "-fx-alignment: CENTER_LEFT;" +
+                        "-fx-padding: 12 18;" +
+                        "-fx-background-radius: 9;" +
+                        "-fx-cursor: hand;"
+        );
+
+        button.setOnMouseEntered(e ->
+                button.setStyle(
+                        "-fx-background-color: #187C7F;" +
+                                "-fx-text-fill: white;" +
+                                "-fx-font-size: 15px;" +
+                                "-fx-alignment: CENTER_LEFT;" +
+                                "-fx-padding: 12 18;" +
+                                "-fx-background-radius: 9;" +
+                                "-fx-cursor: hand;"
+                )
+        );
+
+        button.setOnMouseExited(e ->
+                button.setStyle(
+                        "-fx-background-color: transparent;" +
+                                "-fx-text-fill: white;" +
+                                "-fx-font-size: 15px;" +
+                                "-fx-alignment: CENTER_LEFT;" +
+                                "-fx-padding: 12 18;" +
+                                "-fx-background-radius: 9;" +
+                                "-fx-cursor: hand;"
+                )
+        );
+
+        return button;
+    }
+
 
 }
