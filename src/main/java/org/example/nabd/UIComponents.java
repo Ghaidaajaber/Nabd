@@ -1,6 +1,9 @@
 package org.example.nabd;
 import java.net.URL;
+import java.sql.SQLException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.function.Consumer;
 
 import javafx.application.Platform;
@@ -20,7 +23,17 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import org.example.nabd.TestConnection;
-
+import javafx.geometry.Insets;
+import javafx.scene.control.Label;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.Priority;
+import javafx.scene.Node;
+import javafx.scene.control.ScrollPane;
+import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.collections.ObservableList;
+import javafx.scene.control.TableView;
+import javafx.scene.control.TableColumn;
 public class UIComponents {
 
     public static Button createLogoutButton() {
@@ -966,6 +979,474 @@ public class UIComponents {
         dialog.showAndWait();
 
         return added[0];
+    }
+
+    public static Button menuButton(String text) {
+
+        Button button = new Button(text);
+
+        button.setMaxWidth(Double.MAX_VALUE);
+        button.setPrefHeight(45);
+
+        button.setStyle(
+                "-fx-background-color: transparent;" +
+                        "-fx-text-fill: white;" +
+                        "-fx-font-size: 15px;" +
+                        "-fx-alignment: CENTER_LEFT;" +
+                        "-fx-padding: 12 18;" +
+                        "-fx-background-radius: 9;" +
+                        "-fx-cursor: hand;"
+        );
+
+        button.setOnMouseEntered(e ->
+                button.setStyle(
+                        "-fx-background-color: #187C7F;" +
+                                "-fx-text-fill: white;" +
+                                "-fx-font-size: 15px;" +
+                                "-fx-alignment: CENTER_LEFT;" +
+                                "-fx-padding: 12 18;" +
+                                "-fx-background-radius: 9;" +
+                                "-fx-cursor: hand;"
+                )
+        );
+
+        button.setOnMouseExited(e ->
+                button.setStyle(
+                        "-fx-background-color: transparent;" +
+                                "-fx-text-fill: white;" +
+                                "-fx-font-size: 15px;" +
+                                "-fx-alignment: CENTER_LEFT;" +
+                                "-fx-padding: 12 18;" +
+                                "-fx-background-radius: 9;" +
+                                "-fx-cursor: hand;"
+                )
+        );
+
+        return button;
+    }
+
+    public static HBox createHeader(Label pageTitle, String role) {
+
+        pageTitle.setStyle(
+                "-fx-font-size: 22px;" +
+                        "-fx-font-weight: bold;" +
+                        "-fx-text-fill: #075D61;"
+        );
+
+        Label roleLabel = new Label(role);
+
+        roleLabel.setStyle(
+                "-fx-font-size: 14px;" +
+                        "-fx-text-fill: #555555;"
+        );
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        HBox header = new HBox(20, pageTitle, spacer, roleLabel);
+
+        header.setAlignment(Pos.CENTER_LEFT);
+        header.setPadding(new Insets(0, 30, 0, 30));
+        header.setPrefHeight(75);
+
+        header.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-border-color: #E5E7EB;" +
+                        "-fx-border-width: 0 0 1 0;"
+        );
+
+        return header;
+    }
+
+    public static ScrollPane createContent(VBox content) {
+
+        content.setPadding(new Insets(30));
+        content.setFillWidth(true);
+
+        ScrollPane scrollPane = new ScrollPane(content);
+
+        scrollPane.setFitToWidth(true);
+
+        scrollPane.setStyle(
+                "-fx-background: #F5F7FA;" +
+                        "-fx-background-color: transparent;"
+        );
+
+        return scrollPane;
+    }
+
+    public static TableView<ObservableList<String>> createTable(
+            String[] columnNames, boolean combineName) {
+
+        TableView<ObservableList<String>> table = new TableView<>();
+
+        for (int i = 0; i < columnNames.length; i++) {
+
+            final int index = i;
+
+            TableColumn<ObservableList<String>, String> column =
+                    new TableColumn<>(columnNames[i]);
+
+            column.setCellValueFactory(data -> {
+
+                ObservableList<String> row = data.getValue();
+
+                if (combineName && index == 1) {
+                    return new ReadOnlyStringWrapper(
+                            row.get(1) + " " + row.get(2)
+                    );
+                }
+
+                int dataIndex = combineName && index > 1
+                        ? index + 1 : index;
+
+                return new ReadOnlyStringWrapper(row.get(dataIndex));
+            });
+
+            table.getColumns().add(column);
+        }
+
+        return table;
+    }
+
+    public static TableColumn<ObservableList<String>, Void>
+    createEditColumn(Consumer<ObservableList<String>> onEdit) {
+
+        TableColumn<ObservableList<String>, Void> column =
+                new TableColumn<>("Actions");
+
+        column.setCellFactory(param -> new TableCell<>() {
+
+            private final Button editButton = new Button("Edit");
+
+            {
+                editButton.setOnAction(e -> {
+                    ObservableList<String> row =
+                            getTableView().getItems().get(getIndex());
+
+                    onEdit.accept(row);
+                });
+            }
+
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+
+                setGraphic(empty ? null : editButton);
+            }
+        });
+
+        return column;
+    }
+
+    public static void showAppointmentDialog(
+            ObservableList<String> row, Runnable onSuccess) {
+
+        boolean isEdit = row != null;
+
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle(isEdit ? "Edit Appointment" : "Add Appointment");
+        dialog.setHeaderText("Appointment Information");
+
+        HospitalOperations operations = new HospitalOperations();
+
+        ComboBox<String> patientBox = new ComboBox<>();
+        TextField patientSearch = new TextField();
+        patientSearch.setPromptText("Search by ID, name or phone...");
+
+        ComboBox<String> doctorBox = new ComboBox<>();
+        TextField doctorSearch = new TextField();
+        doctorSearch.setPromptText("Search by ID, name or specialization...");
+
+        DatePicker datePicker = new DatePicker();
+        datePicker.setEditable(false);
+
+        ComboBox<LocalTime> timeBox = new ComboBox<>();
+
+        TextField reasonField = new TextField();
+
+        ComboBox<String> statusBox = new ComboBox<>();
+        statusBox.getItems().addAll("Scheduled", "Completed", "Cancelled");
+        statusBox.setValue("Scheduled");
+
+        // Load patients
+        UIComponents.loadPatients(patientBox,
+                isEdit ? Integer.parseInt(row.get(7)) : -1);
+
+        UIComponents.setupComboBoxSearch(
+                patientBox,
+                patientSearch,
+                () -> UIComponents.loadPatients(patientBox, -1)
+        );
+
+        // Add new patient
+        Button newPatientButton = new Button("+ New Patient");
+
+        newPatientButton.setOnAction(e -> {
+
+            int newPatientId = UIComponents.showPatientDialog(null);
+
+            if (newPatientId > 0) {
+                patientSearch.clear();
+                UIComponents.loadPatients(patientBox, newPatientId);
+            }
+        });
+
+        // Load doctors
+        UIComponents.loadDoctors(doctorBox,
+                isEdit ? Integer.parseInt(row.get(8)) : -1);
+
+        UIComponents.setupComboBoxSearch(
+                doctorBox,
+                doctorSearch,
+                () -> UIComponents.loadDoctors(doctorBox, -1)
+        );
+
+        // Available time options
+        for (int i = 0; i < 48; i++) {
+            timeBox.getItems().add(
+                    LocalTime.MIDNIGHT.plusMinutes(i * 30L)
+            );
+        }
+
+        // Fill existing data when editing
+        if (isEdit) {
+
+            datePicker.setValue(LocalDate.parse(row.get(3)));
+
+            LocalTime existingTime = LocalTime.parse(row.get(4));
+
+            if (!timeBox.getItems().contains(existingTime)) {
+                timeBox.getItems().add(existingTime);
+            }
+
+            timeBox.setValue(existingTime);
+            reasonField.setText(row.get(5));
+            statusBox.setValue(row.get(6));
+        }
+
+        patientBox.setPrefWidth(250);
+        doctorBox.setPrefWidth(250);
+        datePicker.setPrefWidth(250);
+        timeBox.setPrefWidth(250);
+        statusBox.setPrefWidth(250);
+
+        HBox patientRow = new HBox(10, patientBox, newPatientButton);
+        patientRow.setAlignment(Pos.CENTER_LEFT);
+
+        VBox patientContainer = new VBox(8, patientSearch, patientRow);
+        VBox doctorContainer = new VBox(8, doctorSearch, doctorBox);
+
+        GridPane form = new GridPane();
+
+        form.setHgap(15);
+        form.setVgap(15);
+        form.setPadding(new Insets(20));
+
+        form.addRow(0, new Label("Patient"), patientContainer);
+        form.addRow(1, new Label("Doctor"), doctorContainer);
+        form.addRow(2, new Label("Appointment Date"), datePicker);
+        form.addRow(3, new Label("Appointment Time"), timeBox);
+        form.addRow(4, new Label("Reason"), reasonField);
+        form.addRow(5, new Label("Status"), statusBox);
+
+        dialog.getDialogPane().setContent(form);
+
+        ButtonType saveType = new ButtonType(
+                "Save", ButtonBar.ButtonData.OK_DONE
+        );
+
+        dialog.getDialogPane().getButtonTypes().addAll(
+                saveType, ButtonType.CANCEL
+        );
+
+        Button save = (Button) dialog.getDialogPane().lookupButton(saveType);
+
+        save.setDefaultButton(false);
+
+        UIComponents.setupKeyboardNavigation(
+                dialog,
+                patientSearch,
+                patientBox,
+                doctorSearch,
+                doctorBox,
+                datePicker,
+                timeBox,
+                reasonField,
+                statusBox,
+                save
+        );
+
+        save.addEventFilter(ActionEvent.ACTION, event -> {
+
+            // Required fields validation
+            if (patientBox.getValue() == null
+                    || doctorBox.getValue() == null
+                    || datePicker.getValue() == null
+                    || timeBox.getValue() == null
+                    || statusBox.getValue() == null) {
+
+                UIComponents.showAlert(
+                        Alert.AlertType.WARNING,
+                        "Please fill in all required fields."
+                );
+
+                event.consume();
+                return;
+            }
+
+            int patientId = Integer.parseInt(
+                    patientBox.getValue().split(" - ", 2)[0]
+            );
+
+            int doctorId = Integer.parseInt(
+                    doctorBox.getValue().split(" - ", 2)[0]
+            );
+
+            LocalDateTime appointmentDate = LocalDateTime.of(
+                    datePicker.getValue(),
+                    timeBox.getValue()
+            );
+
+            String reason = reasonField.getText().trim();
+            String status = statusBox.getValue();
+
+            // Date validation
+            if (status.equals("Scheduled")
+                    && appointmentDate.isBefore(LocalDateTime.now())) {
+
+                UIComponents.showAlert(
+                        Alert.AlertType.WARNING,
+                        "Scheduled appointments cannot be in the past."
+                );
+
+                event.consume();
+                return;
+            }
+
+            if (status.equals("Completed")
+                    && appointmentDate.isAfter(LocalDateTime.now())) {
+
+                UIComponents.showAlert(
+                        Alert.AlertType.WARNING,
+                        "Completed appointments cannot be in the future."
+                );
+
+                event.consume();
+                return;
+            }
+
+            // Reason validation
+            if (reason.length() > 255) {
+
+                UIComponents.showAlert(
+                        Alert.AlertType.WARNING,
+                        "Reason cannot exceed 255 characters."
+                );
+
+                event.consume();
+                return;
+            }
+
+            int appointmentId = isEdit
+                    ? Integer.parseInt(row.get(0))
+                    : 0;
+
+            try {
+
+                // Protect appointments linked to medical records
+                if (isEdit && operations.hasMedicalRecord(appointmentId)) {
+
+                    if (patientId != Integer.parseInt(row.get(7))
+                            || doctorId != Integer.parseInt(row.get(8))
+                            || status.equals("Cancelled")) {
+
+                        UIComponents.showAlert(
+                                Alert.AlertType.WARNING,
+                                "Cannot change the patient, doctor or cancel an appointment linked to a medical record."
+                        );
+
+                        event.consume();
+                        return;
+                    }
+                }
+
+                // Check appointment conflicts
+                if (!status.equals("Cancelled")
+                        && operations.hasAppointmentConflict(
+                        appointmentId,
+                        patientId,
+                        doctorId,
+                        appointmentDate
+                )) {
+
+                    UIComponents.showAlert(
+                            Alert.AlertType.WARNING,
+                            "The doctor or patient already has an appointment at this time."
+                    );
+
+                    event.consume();
+                    return;
+                }
+
+            } catch (SQLException | ClassNotFoundException e) {
+
+                UIComponents.showAlert(
+                        Alert.AlertType.ERROR,
+                        "Unable to validate appointment."
+                );
+
+                event.consume();
+                return;
+            }
+
+            boolean success;
+
+            if (isEdit) {
+
+                success = operations.updateAppointment(
+                        appointmentId,
+                        patientId,
+                        doctorId,
+                        appointmentDate,
+                        reason,
+                        status
+                );
+
+            } else {
+
+                success = operations.addAppointment(
+                        patientId,
+                        doctorId,
+                        appointmentDate,
+                        reason,
+                        status
+                );
+            }
+
+            if (success) {
+
+                UIComponents.showAlert(
+                        Alert.AlertType.INFORMATION,
+                        isEdit
+                                ? "Appointment updated successfully."
+                                : "Appointment added successfully."
+                );
+
+                onSuccess.run();
+
+            } else {
+
+                UIComponents.showAlert(
+                        Alert.AlertType.ERROR,
+                        "Failed to save appointment."
+                );
+
+                event.consume();
+            }
+        });
+
+        dialog.showAndWait();
     }
 
 
