@@ -1,4 +1,3 @@
-
 package org.example.nabd;
 
 import javafx.beans.binding.Bindings;
@@ -12,7 +11,6 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
-import javafx.stage.Stage;
 import org.kordamp.ikonli.javafx.FontIcon;
 import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 import org.mindrot.jbcrypt.BCrypt;
@@ -21,6 +19,8 @@ import java.net.URL;
 import java.sql.*;
 
 public class login {
+
+    private boolean mustChangePassword;
 
     public Scene createScene() {
 
@@ -33,6 +33,7 @@ public class login {
         );
 
         if (backgroundUrl != null) {
+
             ImageView background = new ImageView(
                     new Image(backgroundUrl.toExternalForm())
             );
@@ -41,12 +42,15 @@ public class login {
             background.fitHeightProperty().bind(root.heightProperty());
 
             root.getChildren().add(background);
+
         } else {
+
             root.setStyle("-fx-background-color: #EAF3FC;");
         }
 
         // Card
         VBox card = new VBox(12);
+
         card.setAlignment(Pos.CENTER);
         card.setPadding(new Insets(30, 40, 25, 40));
 
@@ -90,6 +94,7 @@ public class login {
             logoBox = new VBox(0, logo);
 
         } else {
+
             logoBox = new VBox(0);
         }
 
@@ -97,23 +102,30 @@ public class login {
 
         // Username
         TextField username = new TextField();
+
         username.setPromptText("Username");
         username.setPrefHeight(40);
         username.setMaxWidth(265);
 
-        String fieldStyle = "-fx-background-color: #F4F7FC;" + "-fx-background-radius: 20;" +
-                "-fx-border-color: #DCE5F0;" + "-fx-border-radius: 20;" +
-                        "-fx-padding: 0 15;" + "-fx-font-size: 13;";
+        String fieldStyle =
+                "-fx-background-color: #F4F7FC;" +
+                        "-fx-background-radius: 20;" +
+                        "-fx-border-color: #DCE5F0;" +
+                        "-fx-border-radius: 20;" +
+                        "-fx-padding: 0 15;" +
+                        "-fx-font-size: 13;";
 
         username.setStyle(fieldStyle);
 
         // Password
         PasswordField password = new PasswordField();
+
         password.setPromptText("Password");
         password.setStyle(fieldStyle);
         password.setPrefHeight(40);
 
         TextField visiblePassword = new TextField();
+
         visiblePassword.setPromptText("Password");
         visiblePassword.setStyle(fieldStyle);
         visiblePassword.setPrefHeight(40);
@@ -134,6 +146,7 @@ public class login {
         eyeIcon.setIconColor(Color.web("#0B2545"));
 
         Button eyeButton = new Button();
+
         eyeButton.setGraphic(eyeIcon);
         eyeButton.setPrefSize(20, 20);
         eyeButton.setFocusTraversable(false);
@@ -153,10 +166,15 @@ public class login {
             password.setVisible(!show);
             password.setManaged(!show);
 
-            eyeIcon.setIconCode(show ? FontAwesomeSolid.EYE : FontAwesomeSolid.EYE_SLASH);
+            eyeIcon.setIconCode(
+                    show ? FontAwesomeSolid.EYE
+                            : FontAwesomeSolid.EYE_SLASH
+            );
         });
 
-        StackPane passwordBox = new StackPane(password, visiblePassword, eyeButton);
+        StackPane passwordBox = new StackPane(
+                password, visiblePassword, eyeButton
+        );
 
         passwordBox.setMaxWidth(265);
 
@@ -166,8 +184,23 @@ public class login {
                 eyeButton, new Insets(0, 7, 0, 0)
         );
 
+        // Forgot Password
+        Hyperlink forgotPassword = new Hyperlink(
+                "Forgot Password?"
+        );
+
+        forgotPassword.setStyle(
+                "-fx-text-fill: #0B2545;" +
+                        "-fx-font-size: 12px;"
+        );
+
+        forgotPassword.setOnAction(
+                e -> showForgotPasswordDialog()
+        );
+
         // Login Button
         Button loginButton = new Button("Login  →");
+
         loginButton.setPrefSize(265, 40);
 
         loginButton.setStyle(
@@ -180,54 +213,75 @@ public class login {
 
         // Message
         Label message = new Label();
+
         message.setFont(Font.font("Arial", 11));
         message.setTextFill(Color.web("#C62828"));
         message.setWrapText(true);
 
         // Login Action
         loginButton.setOnAction(e -> {
+
             String user = username.getText().trim();
             String pass = password.getText();
 
-            if (user.isEmpty() ) {
+            if (user.isEmpty()) {
+
                 message.setText("Please enter username");
                 message.setTextFill(Color.RED);
                 return;
-            }
-             else if(pass.isEmpty()){
+
+            } else if (pass.isEmpty()) {
+
                 message.setText("Please enter password!");
                 message.setTextFill(Color.RED);
                 return;
-
             }
 
-
-            String role = checkLogin(user, pass);
+            String role = checkLogin(user, pass, message);
 
             if (role != null) {
-                TestConnection.openDashboard(role);
-            } else {
-                message.setText("Invalid username or password");
+
+                TestConnection.openDashboard(
+                        role,
+                        mustChangePassword,
+                        pass
+                );
             }
         });
 
         username.setOnAction(e -> password.requestFocus());
+
         password.setOnAction(e -> loginButton.fire());
+
         visiblePassword.setOnAction(e -> loginButton.fire());
 
-        card.getChildren().addAll(logoBox, username, passwordBox, loginButton, message);
+        card.getChildren().addAll(
+                logoBox,
+                username,
+                passwordBox,
+                forgotPassword,
+                loginButton,
+                message
+        );
+
         root.getChildren().add(card);
 
         return new Scene(root, 900, 600);
     }
 
+    private String checkLogin(
+            String username,
+            String password,
+            Label message) {
 
-    private String checkLogin(String username, String password) {
+        message.setText("Invalid username or password");
 
-        String sql = "SELECT u.UserID, u.PasswordHash, u.Role, d.DoctorID "
-                + "FROM Users u "
-                + "LEFT JOIN Doctor d ON u.UserID = d.UserID "
-                + "WHERE u.Username = ? AND u.IsActive = 1";
+        int userId;
+        boolean mustChange;
+        String role;
+        Integer doctorId;
+
+        String sql = "SELECT u.UserID, u.PasswordHash, u.Role, u.MustChangePassword, d.DoctorID FROM Users u LEFT JOIN Doctor d ON u.UserID = d.UserID WHERE u.Username = ? AND u.IsActive = TRUE";
 
         try (Connection con = TestConnection.makeConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
@@ -236,39 +290,139 @@ public class login {
 
             try (ResultSet rs = ps.executeQuery()) {
 
-                if (rs.next()) {
+                if (!rs.next()) {
+                    return null;
+                }
 
-                    String storedHash = rs.getString("PasswordHash");
-                    String role = rs.getString("Role");
+                String hash = rs.getString("PasswordHash");
 
-                    if (storedHash != null &&
-                            BCrypt.checkpw(password, storedHash)) {
+                if (hash == null || !BCrypt.checkpw(password, hash)) {
+                    return null;
+                }
 
-                        Integer doctorId =
-                                rs.getObject("DoctorID", Integer.class);
+                userId = rs.getInt("UserID");
+                role = rs.getString("Role");
+                doctorId = rs.getObject("DoctorID", Integer.class);
+                mustChange = rs.getBoolean("MustChangePassword");
 
-                        if ("Doctor".equals(role) && doctorId == null) {
-                            return null;
-                        }
-                        TestConnection.setCurrentUser(
-                                rs.getInt("UserID"),
-                                role,
-                                doctorId
-                        );
-                        return role;
-                    }
+                if (!java.util.Set.of(
+                        "Administrator",
+                        "Doctor",
+                        "Receptionist"
+                ).contains(role)) {
+
+                    return null;
+                }
+
+                if ("Doctor".equals(role) && doctorId == null) {
+                    return null;
                 }
             }
 
-        } catch (SQLException | ClassNotFoundException e) {
-            e.printStackTrace();
+        } catch (SQLException |
+                 ClassNotFoundException |
+                 IllegalArgumentException e) {
 
-        } catch (IllegalArgumentException e) {
-            System.err.println("Invalid BCrypt hash.");
+            message.setText("Unable to sign in.");
+            return null;
         }
 
-        return null;
+        mustChangePassword = mustChange;
+
+        TestConnection.setCurrentUser(
+                userId,
+                role,
+                doctorId
+        );
+
+        message.setText("");
+
+        return role;
     }
 
+    private void showForgotPasswordDialog() {
 
+        Dialog<ButtonType> dialog = new Dialog<>();
+
+        dialog.setTitle("Forgot Password");
+        dialog.setHeaderText("Request Password Reset");
+
+        TextField usernameField = new TextField();
+
+        usernameField.setPromptText("Username");
+
+        Label description = new Label(
+                "Send a password reset request to the administrator."
+        );
+
+        description.setWrapText(true);
+
+        VBox content = new VBox(
+                12,
+                description,
+                new Label("Username:"),
+                usernameField
+        );
+
+        content.setPadding(new Insets(20));
+
+        dialog.getDialogPane().setContent(content);
+
+        ButtonType sendType = new ButtonType(
+                "Send Request",
+                ButtonBar.ButtonData.OK_DONE
+        );
+
+        dialog.getDialogPane().getButtonTypes().addAll(
+                sendType,
+                ButtonType.CANCEL
+        );
+
+        Button send = (Button) dialog.getDialogPane()
+                .lookupButton(sendType);
+
+        send.setDefaultButton(false);
+
+        UIComponents.setupKeyboardNavigation(
+                dialog,
+                usernameField,
+                send
+        );
+
+        send.addEventFilter(
+                javafx.event.ActionEvent.ACTION, event -> {
+
+                    String username = usernameField.getText().trim();
+
+                    if (username.isEmpty() || username.length() > 50) {
+
+                        UIComponents.showAlert(
+                                Alert.AlertType.WARNING,
+                                "Please enter a valid username."
+                        );
+
+                        event.consume();
+                        return;
+                    }
+
+                    HospitalOperations operations =
+                            new HospitalOperations();
+
+                    if (operations.requestPasswordReset(username)) {
+
+                        UIComponents.showAlert(Alert.AlertType.INFORMATION, "If an active account exists, your request has been submitted. Please contact the administrator.");
+
+                    } else {
+
+                        UIComponents.showAlert(
+                                Alert.AlertType.ERROR,
+                                "Unable to submit password reset request."
+                        );
+
+                        event.consume();
+                    }
+                });
+
+        dialog.showAndWait();
+    }
 }

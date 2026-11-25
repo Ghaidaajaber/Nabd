@@ -416,186 +416,72 @@ public class AdminDashboard {
 
 
     private void showAddDepartmentDialog() {
-
-        Dialog<ButtonType> dialog = new Dialog<>();
-        dialog.setTitle("Add Department");
-        dialog.setHeaderText("Enter Department Information");
-
-        TextField nameField = new TextField();
-        nameField.setPromptText("Department Name");
-
-        TextField locationField = new TextField();
-        locationField.setPromptText("Location");
-
-        TextField phoneField = new TextField();
-        phoneField.setPromptText("Phone: 02-*******");
-
-        Label name1 = new Label("Department Name");
-        Label location1 = new Label("Location");
-        Label phone1 = new Label("Phone");
-
-        name1.setPrefWidth(130);
-        location1.setPrefWidth(130);
-        phone1.setPrefWidth(130);
-
-        nameField.setPrefWidth(230);
-        locationField.setPrefWidth(230);
-        phoneField.setPrefWidth(230);
-
-        HBox n = new HBox(15, name1, nameField);
-        HBox l = new HBox(15, location1, locationField);
-        HBox p = new HBox(15, phone1, phoneField);
-
-        n.setAlignment(Pos.CENTER_LEFT);
-        l.setAlignment(Pos.CENTER_LEFT);
-        p.setAlignment(Pos.CENTER_LEFT);
-
-        VBox form = new VBox(20, n, l, p);
-        form.setPadding(new Insets(20));
-
-        dialog.getDialogPane().setContent(form);
-
-        ButtonType saveButton = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
-
-        dialog.getDialogPane().getButtonTypes().addAll(saveButton, ButtonType.CANCEL);
-
-        // منع Enter من تشغيل Save تلقائيًا
-        Button save = (Button) dialog.getDialogPane().lookupButton(saveButton);
-        // التنقل بين الحقول باستخدام Enter
-        save.setDefaultButton(false);
-        UIComponents.setupKeyboardNavigation(dialog, nameField, locationField, phoneField, save);
-
-
-
-        // التحقق والحفظ
-        save.addEventFilter(ActionEvent.ACTION, event -> {
-
-            String name = nameField.getText().trim();
-            String location = locationField.getText().trim();
-            String phone = phoneField.getText().trim();
-
-            if (name.isEmpty() || location.isEmpty() || phone.isEmpty()) {
-                UIComponents.showAlert(Alert.AlertType.WARNING, "Please fill in all fields.");
-                event.consume();
-                return;
-            }
-
-            if (!phone.matches("\\d{10}")) {
-                UIComponents.showAlert(Alert.AlertType.WARNING, "Phone number must contain exactly 10 digits.");
-                event.consume();
-                return;
-            }
-
-            Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION);
-            confirmation.setTitle("Confirm Addition");
-            confirmation.setHeaderText("Add Department?");
-            confirmation.setContentText("Are you sure you want to add " + name + "?");
-
-            if (confirmation.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) {
-                event.consume();
-                return;
-            }
-
-            HospitalOperations operations = new HospitalOperations();
-
-            if (operations.addDepartment(name, location, phone)) {
-                UIComponents.showAlert(Alert.AlertType.INFORMATION, "Department added successfully.");
-                showDepartments();
-
-            } else {
-                UIComponents.showAlert(Alert.AlertType.ERROR, "Failed to add department.");
-                event.consume();
-            }
-        });
-
-        dialog.showAndWait();
+        showDepartmentDialog(null);
     }
 
-
     private void showEditDepartmentDialog(ObservableList<String> row) {
+        showDepartmentDialog(row);
+    }
 
-        int id = Integer.parseInt(row.get(0));
-
+    private void showDepartmentDialog(ObservableList<String> row) {
+        boolean isEdit = row != null;
+        int id = isEdit ? Integer.parseInt(row.get(0)) : 0;
         Dialog<ButtonType> dialog = new Dialog<>();
-        dialog.setTitle("Edit Department");
-        dialog.setHeaderText("Edit Department Information");
-
-        TextField nameField = new TextField(row.get(1));
-        TextField locationField = new TextField(row.get(2));
-        TextField phoneField = new TextField(row.get(3));
-
-        Label nameLabel = new Label("Department Name");
-        Label locationLabel = new Label("Location");
-        Label phoneLabel = new Label("Phone");
-
-        nameLabel.setPrefWidth(130);
-        locationLabel.setPrefWidth(130);
-        phoneLabel.setPrefWidth(130);
-
+        dialog.setTitle(isEdit ? "Edit Department" : "Add Department");
+        dialog.setHeaderText(isEdit ? "Edit Department Information" : "Enter Department Information");
+        TextField nameField = new TextField(isEdit ? row.get(1) : "");
+        TextField locationField = new TextField(isEdit ? row.get(2) : "");
+        TextField phoneField = new TextField(isEdit ? row.get(3) : "");
+        nameField.setPromptText("Department Name");
+        locationField.setPromptText("Location");
+        phoneField.setPromptText("Enter phone number");
         nameField.setPrefWidth(230);
         locationField.setPrefWidth(230);
         phoneField.setPrefWidth(230);
-
-        HBox n = new HBox(15, nameLabel, nameField);
-        HBox l = new HBox(15, locationLabel, locationField);
-        HBox p = new HBox(15, phoneLabel, phoneField);
-
-        n.setAlignment(Pos.CENTER_LEFT);
-        l.setAlignment(Pos.CENTER_LEFT);
-        p.setAlignment(Pos.CENTER_LEFT);
-
-        VBox form = new VBox(20, n, l, p);
+        GridPane form = new GridPane();
+        form.setHgap(15);
+        form.setVgap(20);
         form.setPadding(new Insets(20));
-
+        form.addRow(0, new Label("Department Name"), nameField);
+        form.addRow(1, new Label("Location"), locationField);
+        form.addRow(2, new Label("Phone"), phoneField);
         dialog.getDialogPane().setContent(form);
-
-        ButtonType saveButton = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
-
-        dialog.getDialogPane().getButtonTypes().addAll(saveButton, ButtonType.CANCEL);
-
-        Button save = (Button) dialog.getDialogPane().lookupButton(saveButton);
+        ButtonType saveType = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(saveType, ButtonType.CANCEL);
+        Button save = (Button) dialog.getDialogPane().lookupButton(saveType);
         save.setDefaultButton(false);
-
         UIComponents.setupKeyboardNavigation(dialog, nameField, locationField, phoneField, save);
         save.addEventFilter(ActionEvent.ACTION, event -> {
-
             String name = nameField.getText().trim();
             String location = locationField.getText().trim();
             String phone = phoneField.getText().trim();
-
             if (name.isEmpty() || location.isEmpty() || phone.isEmpty()) {
                 UIComponents.showAlert(Alert.AlertType.WARNING, "Please fill in all fields.");
                 event.consume();
                 return;
             }
-
-            if (!phone.matches("\\d{10}")) {
-                UIComponents.showAlert(Alert.AlertType.WARNING, "Phone number must contain exactly 10 digits.");
+            if (!phone.matches("\\d{9,10}")) {
+                UIComponents.showAlert(Alert.AlertType.WARNING, "Phone number must contain 9 or 10 digits.");
                 event.consume();
                 return;
             }
-
-            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-            confirm.setTitle("Confirm Update");
-            confirm.setHeaderText("Update Department?");
-            confirm.setContentText("Are you sure you want to save these changes?");
-
-            if (confirm.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) {
+            Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION,
+                    isEdit ? "Are you sure you want to update this department?" : "Are you sure you want to add this department?",
+                    ButtonType.YES, ButtonType.NO);
+            if (confirmation.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) {
                 event.consume();
                 return;
             }
-
             HospitalOperations operations = new HospitalOperations();
-            boolean updated = operations.updateDepartment(id, name, location, phone);
-            UIComponents.showAlert(updated ? Alert.AlertType.INFORMATION : Alert.AlertType.ERROR, updated ? "Department updated successfully." : "Failed to update department.");
-
-            if (updated) {
+            boolean success = isEdit ? operations.updateDepartment(id, name, location, phone) : operations.addDepartment(name, location, phone);
+            if (success) {
+                UIComponents.showAlert(Alert.AlertType.INFORMATION, isEdit ? "Department updated successfully." : "Department added successfully.");
                 showDepartments();
             } else {
+                UIComponents.showAlert(Alert.AlertType.ERROR, "Failed to save department.");
                 event.consume();
             }
         });
-
         dialog.showAndWait();
     }
 
@@ -1653,6 +1539,19 @@ public class AdminDashboard {
                 return;
             }
             // Protect the last active administrator
+            if (isEdit &&
+                    java.util.Objects.equals(
+                            TestConnection.getCurrentUserId(), userId) &&
+                    (!role.equals("Administrator") || !activeBox.isSelected())) {
+
+                UIComponents.showAlert(
+                        Alert.AlertType.WARNING,
+                        "You cannot deactivate your own account or change your role while logged in."
+                );
+
+                event.consume();
+                return;
+            }
 
             if (isEdit && (!role.equals("Administrator") || !activeBox.isSelected())) {
 

@@ -1603,6 +1603,135 @@ public class UIComponents {
 
         dialog.showAndWait();
     }
+    public static void showMandatoryPasswordDialog(
+            javafx.stage.Stage owner,
+            int userId,
+            String currentPassword) {
+
+        javafx.stage.Stage window = new javafx.stage.Stage(
+                javafx.stage.StageStyle.UNDECORATED
+        );
+
+        window.initOwner(owner);
+        window.initModality(javafx.stage.Modality.APPLICATION_MODAL);
+        window.setTitle("Change Password");
+
+        window.setOnCloseRequest(event -> event.consume());
+
+        Label title = new Label("Change Password");
+
+        title.setStyle(
+                "-fx-font-size: 22px;" +
+                        "-fx-font-weight: bold;" +
+                        "-fx-text-fill: #176B68;"
+        );
+
+        Label description = new Label(
+                "You must change your temporary password before continuing."
+        );
+
+        description.setWrapText(true);
+
+        PasswordField newPassword = new PasswordField();
+        newPassword.setPromptText("New Password");
+
+        PasswordField confirm = new PasswordField();
+        confirm.setPromptText("Confirm Password");
+
+        Label message = new Label();
+        message.setWrapText(true);
+        message.setStyle("-fx-text-fill: #C62828;");
+
+        Button save = new Button("Change Password");
+
+        save.setMaxWidth(Double.MAX_VALUE);
+
+        save.setStyle(
+                "-fx-background-color: #176B68;" +
+                        "-fx-text-fill: white;" +
+                        "-fx-padding: 10;"
+        );
+
+        VBox content = new VBox(
+                12,
+                title,
+                description,
+                new Label("New Password"),
+                newPassword,
+                new Label("Confirm Password"),
+                confirm,
+                message,
+                save
+        );
+
+        content.setPadding(new Insets(25));
+
+        content.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-border-color: #176B68;"
+        );
+
+        javafx.scene.Scene scene =
+                new javafx.scene.Scene(content, 420, 350);
+
+        scene.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+
+            if (event.getCode() == KeyCode.ESCAPE) {
+                event.consume();
+            }
+        });
+
+        window.setScene(scene);
+
+        save.setOnAction(event -> {
+
+            String value = newPassword.getText();
+
+            if (value.isBlank()) {
+
+                message.setText("Enter a new password.");
+
+            } else if (!value.equals(confirm.getText())) {
+
+                message.setText("Passwords do not match.");
+
+            } else if (value.equals(currentPassword)) {
+
+                message.setText("Choose a different password.");
+
+            } else if (value.getBytes(
+                    java.nio.charset.StandardCharsets.UTF_8
+            ).length > 72) {
+
+                message.setText("Password exceeds the allowed length.");
+
+            } else if (new HospitalOperations().changePassword(
+                    userId,
+                    currentPassword,
+                    value
+            )) {
+
+                newPassword.clear();
+                confirm.clear();
+
+                window.hide();
+
+            } else {
+
+                message.setText(
+                        "Unable to change password. Please try again."
+                );
+            }
+        });
+
+        newPassword.setOnAction(event -> confirm.requestFocus());
+
+        confirm.setOnAction(event -> save.fire());
+
+        window.setOnShown(event -> newPassword.requestFocus());
+
+        window.showAndWait();
+    }
 
     public static VBox createStatCard(
             String title, long count, String color) {
