@@ -290,7 +290,19 @@ public class UIComponents {
         patientBox.getItems().clear();
         patientBox.setValue(null);
 
-        for (ObservableList<String> patient : operations.getData("Patient")) {
+        String role = TestConnection.getCurrentRole();
+
+        ObservableList<ObservableList<String>> patients;
+
+        if ("Doctor".equals(role)) {
+            patients = operations.getDoctorPatients("Name", "");
+        } else if ("Administrator".equals(role) || "Receptionist".equals(role)) {
+            patients = operations.getData("Patient");
+        } else {
+            return;
+        }
+
+        for (ObservableList<String> patient : patients) {
 
             String item = patient.get(0) + " - " + patient.get(1) + " " + patient.get(2) + " - " + (patient.get(5) == null ? "" : patient.get(5));
 
@@ -337,8 +349,41 @@ public class UIComponents {
     }
     public static boolean showMedicalRecordDetails(ObservableList<String> row, String role) {
 
-        boolean isAdmin = "Admin".equalsIgnoreCase(role)
-                || "Administrator".equalsIgnoreCase(role);
+        String currentRole = TestConnection.getCurrentRole();
+
+        boolean isAdmin = "Administrator".equals(currentRole);
+
+        boolean isDoctor = "Doctor".equals(currentRole)
+                && TestConnection.getCurrentDoctorId() != null;
+
+        if (!isAdmin && !isDoctor) {
+            showAlert(Alert.AlertType.ERROR,
+                    "You are not authorized to view medical records.");
+            return false;
+        }
+
+        if (row == null || row.isEmpty()) {
+            return false;
+        }
+
+        HospitalOperations operations = new HospitalOperations();
+
+        ObservableList<String> authorizedRow =
+                operations.getMedicalRecords("RecordID", row.get(0))
+                        .stream()
+                        .filter(record -> record.get(0).equals(row.get(0)))
+                        .findFirst()
+                        .orElse(null);
+
+        if (authorizedRow == null) {
+            showAlert(Alert.AlertType.ERROR,
+                    "You are not authorized to view this record.");
+            return false;
+        }
+
+        row.setAll(authorizedRow);
+
+        boolean canEdit = isAdmin || isDoctor;
 
         boolean[] updated = {false};
 
@@ -346,8 +391,6 @@ public class UIComponents {
 
         dialog.setTitle("Medical Record Details");
         dialog.setHeaderText(null);
-
-        HospitalOperations operations = new HospitalOperations();
 
         // Header
         Label title = new Label("Medical Record Details");
@@ -441,8 +484,8 @@ public class UIComponents {
         Button saveButton = new Button("Save Changes");
         Button cancelButton = new Button("Cancel");
 
-        editButton.setVisible(isAdmin);
-        editButton.setManaged(isAdmin);
+        editButton.setVisible(canEdit);
+        editButton.setManaged(canEdit);
 
         saveButton.setVisible(false);
         saveButton.setManaged(false);
@@ -469,14 +512,14 @@ public class UIComponents {
 
             for (TextArea field : medicalFields) {
 
-                field.setEditable(editing);
+                field.setEditable(editing && canEdit);
             }
 
-            editButton.setVisible(!editing && isAdmin);
-            editButton.setManaged(!editing && isAdmin);
+            editButton.setVisible(!editing && canEdit);
+            editButton.setManaged(!editing && canEdit);
 
-            saveButton.setVisible(editing);
-            saveButton.setManaged(editing);
+            saveButton.setVisible(editing && canEdit);
+            saveButton.setManaged(editing && canEdit);
 
             cancelButton.setVisible(editing);
             cancelButton.setManaged(editing);
@@ -485,9 +528,17 @@ public class UIComponents {
         // Edit
         editButton.setOnAction(e -> {
 
+            if (!canEdit) {
+                return;
+            }
+
             setEditMode.accept(true);
 
-            recordDate.requestFocus();
+            if (isAdmin) {
+                recordDate.requestFocus();
+            } else {
+                medicalFields[0].requestFocus();
+            }
         });
 
         // Cancel editing
@@ -508,7 +559,7 @@ public class UIComponents {
         // Save changes
         saveButton.setOnAction(e -> {
 
-            if (!isAdmin) {
+            if (!canEdit) {
 
                 showAlert(Alert.AlertType.ERROR,
                         "You are not authorized to edit this record.");
@@ -648,6 +699,18 @@ public class UIComponents {
         return column;
     }
     public static boolean showAddMedicalRecordDialog() {
+
+        String role = TestConnection.getCurrentRole();
+
+        if (!"Administrator".equals(role)
+                && !("Doctor".equals(role)
+                && TestConnection.getCurrentDoctorId() != null)) {
+
+            showAlert(Alert.AlertType.ERROR,
+                    "You are not authorized to add medical records.");
+
+            return false;
+        }
 
         boolean[] added = {false};
 

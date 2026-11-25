@@ -217,6 +217,80 @@ public class HospitalOperations {
     // deleteDoctor()
     // searchDoctors()
 
+    // Doctor Patients
+
+    public ObservableList<ObservableList<String>> getDoctorPatients(
+            String searchBy, String search) {
+
+        ObservableList<ObservableList<String>> data =
+                FXCollections.observableArrayList();
+
+        Integer doctorId = TestConnection.getCurrentDoctorId();
+
+        if (!"Doctor".equals(TestConnection.getCurrentRole())
+                || doctorId == null) {
+
+            return data;
+        }
+
+        String column;
+
+        switch (searchBy) {
+
+            case "PatientID":
+                column = "p.PatientID";
+                break;
+
+            case "Name":
+                column = "CONCAT(p.FirstName, ' ', p.LastName)";
+                break;
+
+            default:
+                return data;
+        }
+
+        String sql =
+                "SELECT p.PatientID, p.FirstName, p.LastName, " +
+                        "p.DateOfBirth, p.Gender, p.Phone, " +
+                        "p.Email, p.Address, p.BloodType " +
+                        "FROM Patient p " +
+                        "WHERE EXISTS (" +
+                        "SELECT 1 FROM Appointment a " +
+                        "WHERE a.PatientID = p.PatientID " +
+                        "AND a.DoctorID = ? " +
+                        "AND a.Status <> 'Cancelled') " +
+                        "AND (? = '' OR " + column + " LIKE ?) " +
+                        "ORDER BY p.FirstName, p.LastName";
+
+        try (Connection con = TestConnection.makeConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setInt(1, doctorId);
+            ps.setString(2, search);
+            ps.setString(3, "%" + search + "%");
+
+            try (ResultSet rs = ps.executeQuery()) {
+
+                while (rs.next()) {
+
+                    ObservableList<String> row =
+                            FXCollections.observableArrayList();
+
+                    for (int i = 1; i <= 9; i++) {
+                        row.add(rs.getString(i));
+                    }
+
+                    data.add(row);
+                }
+            }
+
+        } catch (SQLException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        return data;
+    }
+
     // Patients
     public int addPatient(String firstName, String lastName, LocalDate dateOfBirth, String gender, String phone, String email, String address, String bloodType) {
 
@@ -277,13 +351,32 @@ public class HospitalOperations {
     // ...
 
     // Appointments
-    public ObservableList<ObservableList<String>> getAppointments(String searchBy, String search, String status, LocalDate date) {
+    public ObservableList<ObservableList<String>> getAppointments(
+            String searchBy, String search, String status, LocalDate date) {
 
-        ObservableList<ObservableList<String>> data = FXCollections.observableArrayList();
+        ObservableList<ObservableList<String>> data =
+                FXCollections.observableArrayList();
+
+        String role = TestConnection.getCurrentRole();
+
+        Integer doctorId = TestConnection.getCurrentDoctorId();
+
+        if ("Doctor".equals(role)) {
+
+            if (doctorId == null) {
+                return data;
+            }
+
+        } else if (!"Administrator".equals(role)
+                && !"Receptionist".equals(role)) {
+
+            return data;
+        }
 
         String column;
 
         switch (searchBy) {
+
             case "AppointmentID":
                 column = "a.AppointmentID";
                 break;
@@ -304,7 +397,23 @@ public class HospitalOperations {
                 return data;
         }
 
-        String sql = "SELECT a.AppointmentID, CONCAT(p.FirstName, ' ', p.LastName) AS PatientName, CONCAT(d.FirstName, ' ', d.LastName) AS DoctorName, DATE(a.AppointmentDate), TIME(a.AppointmentDate), a.Reason, a.Status, a.PatientID, a.DoctorID FROM Appointment a JOIN Patient p ON a.PatientID = p.PatientID JOIN Doctor d ON a.DoctorID = d.DoctorID WHERE (? = '' OR " + column + " LIKE ?) AND (? = 'All Status' OR a.Status = ?) AND (? IS NULL OR DATE(a.AppointmentDate) = ?) ORDER BY a.AppointmentDate";
+        String sql = "SELECT a.AppointmentID, "
+                + "CONCAT(p.FirstName, ' ', p.LastName) AS PatientName, "
+                + "CONCAT(d.FirstName, ' ', d.LastName) AS DoctorName, "
+                + "DATE(a.AppointmentDate), TIME(a.AppointmentDate), "
+                + "a.Reason, a.Status, a.PatientID, a.DoctorID "
+                + "FROM Appointment a "
+                + "JOIN Patient p ON a.PatientID = p.PatientID "
+                + "JOIN Doctor d ON a.DoctorID = d.DoctorID "
+                + "WHERE (? = '' OR " + column + " LIKE ?) "
+                + "AND (? = 'All Status' OR a.Status = ?) "
+                + "AND (? IS NULL OR DATE(a.AppointmentDate) = ?) ";
+
+        if ("Doctor".equals(role)) {
+            sql += "AND a.DoctorID = ? ";
+        }
+
+        sql += "ORDER BY a.AppointmentDate";
 
         try (Connection con = TestConnection.makeConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
@@ -318,13 +427,20 @@ public class HospitalOperations {
             ps.setDate(5, date == null ? null : java.sql.Date.valueOf(date));
             ps.setDate(6, date == null ? null : java.sql.Date.valueOf(date));
 
+            if ("Doctor".equals(role)) {
+                ps.setInt(7, doctorId);
+            }
+
             try (ResultSet rs = ps.executeQuery()) {
 
                 while (rs.next()) {
 
-                    ObservableList<String> row = FXCollections.observableArrayList();
+                    ObservableList<String> row =
+                            FXCollections.observableArrayList();
 
-                    for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
+                    for (int i = 1;
+                         i <= rs.getMetaData().getColumnCount(); i++) {
+
                         row.add(rs.getString(i));
                     }
 
@@ -416,9 +532,26 @@ public class HospitalOperations {
     // ...
 
     // Medical Records
-    public ObservableList<ObservableList<String>> getMedicalRecords(String searchBy, String search) {
+    public ObservableList<ObservableList<String>> getMedicalRecords(
+            String searchBy, String search) {
 
-        ObservableList<ObservableList<String>> data = FXCollections.observableArrayList();
+        ObservableList<ObservableList<String>> data =
+                FXCollections.observableArrayList();
+
+        String role = TestConnection.getCurrentRole();
+
+        Integer doctorId = TestConnection.getCurrentDoctorId();
+
+        if ("Doctor".equals(role)) {
+
+            if (doctorId == null) {
+                return data;
+            }
+
+        } else if (!"Administrator".equals(role)) {
+
+            return data;
+        }
 
         String column;
 
@@ -456,7 +589,24 @@ public class HospitalOperations {
                 return data;
         }
 
-        String sql = "SELECT m.RecordID, CONCAT(p.FirstName, ' ', p.LastName), CONCAT(d.FirstName, ' ', d.LastName), m.AppointmentID, m.RecordDate, m.Symptoms, m.Diagnosis, m.Treatment, m.Notes, m.PatientID, d.Specialization FROM MedicalRecord m JOIN Patient p ON m.PatientID = p.PatientID JOIN Doctor d ON m.DoctorID = d.DoctorID WHERE (? = '' OR " + column + " LIKE ?) ORDER BY m.RecordDate DESC";
+        String sql =
+                "SELECT m.RecordID, " +
+                        "CONCAT(p.FirstName, ' ', p.LastName), " +
+                        "CONCAT(d.FirstName, ' ', d.LastName), " +
+                        "m.AppointmentID, m.RecordDate, " +
+                        "m.Symptoms, m.Diagnosis, m.Treatment, " +
+                        "m.Notes, m.PatientID, d.Specialization " +
+                        "FROM MedicalRecord m " +
+                        "JOIN Patient p ON m.PatientID = p.PatientID " +
+                        "JOIN Doctor d ON m.DoctorID = d.DoctorID " +
+                        "WHERE (? = '' OR " + column + " LIKE ?) ";
+
+        if ("Doctor".equals(role)) {
+
+            sql += "AND m.DoctorID = ? ";
+        }
+
+        sql += "ORDER BY m.RecordDate DESC";
 
         try (Connection con = TestConnection.makeConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
@@ -464,13 +614,20 @@ public class HospitalOperations {
             ps.setString(1, search);
             ps.setString(2, "%" + search + "%");
 
+            if ("Doctor".equals(role)) {
+
+                ps.setInt(3, doctorId);
+            }
+
             try (ResultSet rs = ps.executeQuery()) {
 
                 while (rs.next()) {
 
-                    ObservableList<String> row = FXCollections.observableArrayList();
+                    ObservableList<String> row =
+                            FXCollections.observableArrayList();
 
-                    for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
+                    for (int i = 1;
+                         i <= rs.getMetaData().getColumnCount(); i++) {
 
                         row.add(rs.getString(i));
                     }
@@ -480,15 +637,56 @@ public class HospitalOperations {
             }
 
         } catch (SQLException | ClassNotFoundException e) {
-
             e.printStackTrace();
         }
 
         return data;
     }
-    public boolean updateMedicalRecord(int recordId, LocalDate recordDate, String symptoms, String diagnosis, String treatment, String notes) {
+    public boolean updateMedicalRecord(int recordId, LocalDate recordDate,
+                                       String symptoms, String diagnosis,
+                                       String treatment, String notes) {
 
-        String sql = "UPDATE MedicalRecord SET RecordDate = ?, Symptoms = ?, Diagnosis = ?, Treatment = ?, Notes = ? WHERE RecordID = ?";
+        String role = TestConnection.getCurrentRole();
+
+        Integer doctorId = TestConnection.getCurrentDoctorId();
+
+        // Check permissions
+
+        if ("Doctor".equals(role)) {
+
+            if (doctorId == null) {
+                return false;
+            }
+
+        } else if (!"Administrator".equals(role)) {
+
+            return false;
+        }
+
+        // Validate data
+
+        if (recordDate == null
+                || recordDate.isAfter(LocalDate.now())
+                || diagnosis == null
+                || diagnosis.isBlank()) {
+
+            return false;
+        }
+
+        String sql = "UPDATE MedicalRecord m "
+                + "JOIN Appointment a ON m.AppointmentID = a.AppointmentID "
+                + "SET m.RecordDate = ?, "
+                + "m.Symptoms = ?, m.Diagnosis = ?, "
+                + "m.Treatment = ?, m.Notes = ? "
+                + "WHERE m.RecordID = ? "
+                + "AND DATE(a.AppointmentDate) <= ? ";
+
+        // Doctor can only update their own records
+
+        if ("Doctor".equals(role)) {
+
+            sql += "AND m.DoctorID = ? ";
+        }
 
         try (Connection con = TestConnection.makeConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
@@ -499,6 +697,12 @@ public class HospitalOperations {
             ps.setString(4, treatment);
             ps.setString(5, notes);
             ps.setInt(6, recordId);
+            ps.setDate(7, java.sql.Date.valueOf(recordDate));
+
+            if ("Doctor".equals(role)) {
+
+                ps.setInt(8, doctorId);
+            }
 
             return ps.executeUpdate() > 0;
 
@@ -509,17 +713,58 @@ public class HospitalOperations {
             return false;
         }
     }
-    public ObservableList<ObservableList<String>> getAvailableAppointments(int patientId) {
+    public ObservableList<ObservableList<String>> getAvailableAppointments(
+            int patientId) {
 
         ObservableList<ObservableList<String>> data =
                 FXCollections.observableArrayList();
 
-        String sql = "SELECT a.AppointmentID, a.DoctorID, CONCAT(d.FirstName, ' ', d.LastName), d.Specialization, DATE(a.AppointmentDate), TIME(a.AppointmentDate) FROM Appointment a JOIN Doctor d ON a.DoctorID = d.DoctorID WHERE a.PatientID = ? AND a.Status = 'Completed' AND NOT EXISTS (SELECT 1 FROM MedicalRecord m WHERE m.AppointmentID = a.AppointmentID) ORDER BY a.AppointmentDate DESC";
+        String role = TestConnection.getCurrentRole();
+
+        Integer doctorId = TestConnection.getCurrentDoctorId();
+
+        // Check permissions
+
+        if ("Doctor".equals(role)) {
+
+            if (doctorId == null) {
+                return data;
+            }
+
+        } else if (!"Administrator".equals(role)) {
+
+            return data;
+        }
+
+        String sql = "SELECT a.AppointmentID, a.DoctorID, "
+                + "CONCAT(d.FirstName, ' ', d.LastName), "
+                + "d.Specialization, DATE(a.AppointmentDate), "
+                + "TIME(a.AppointmentDate) "
+                + "FROM Appointment a "
+                + "JOIN Doctor d ON a.DoctorID = d.DoctorID "
+                + "WHERE a.PatientID = ? "
+                + "AND a.Status = 'Completed' "
+                + "AND NOT EXISTS (SELECT 1 FROM MedicalRecord m "
+                + "WHERE m.AppointmentID = a.AppointmentID) ";
+
+        // Doctor can only select their own appointments
+
+        if ("Doctor".equals(role)) {
+
+            sql += "AND a.DoctorID = ? ";
+        }
+
+        sql += "ORDER BY a.AppointmentDate DESC";
 
         try (Connection con = TestConnection.makeConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
 
             ps.setInt(1, patientId);
+
+            if ("Doctor".equals(role)) {
+
+                ps.setInt(2, doctorId);
+            }
 
             try (ResultSet rs = ps.executeQuery()) {
 
@@ -528,7 +773,8 @@ public class HospitalOperations {
                     ObservableList<String> row =
                             FXCollections.observableArrayList();
 
-                    for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
+                    for (int i = 1;
+                         i <= rs.getMetaData().getColumnCount(); i++) {
 
                         row.add(rs.getString(i));
                     }
@@ -544,7 +790,28 @@ public class HospitalOperations {
 
         return data;
     }
-    public boolean addMedicalRecord(int appointmentId, LocalDate recordDate, String symptoms, String diagnosis, String treatment, String notes) {
+    public boolean addMedicalRecord(int appointmentId, LocalDate recordDate,
+                                    String symptoms, String diagnosis,
+                                    String treatment, String notes) {
+
+        String role = TestConnection.getCurrentRole();
+
+        Integer doctorId = TestConnection.getCurrentDoctorId();
+
+        // Check permissions
+
+        if ("Doctor".equals(role)) {
+
+            if (doctorId == null) {
+                return false;
+            }
+
+        } else if (!"Administrator".equals(role)) {
+
+            return false;
+        }
+
+        // Validate data
 
         if (recordDate == null
                 || recordDate.isAfter(LocalDate.now())
@@ -554,7 +821,24 @@ public class HospitalOperations {
             return false;
         }
 
-        String sql = "INSERT INTO MedicalRecord (PatientID, DoctorID, AppointmentID, RecordDate, Symptoms, Diagnosis, Treatment, Notes) SELECT a.PatientID, a.DoctorID, a.AppointmentID, ?, ?, ?, ?, ? FROM Appointment a WHERE a.AppointmentID = ? AND a.Status = 'Completed' AND DATE(a.AppointmentDate) <= ? AND NOT EXISTS (SELECT 1 FROM MedicalRecord m WHERE m.AppointmentID = a.AppointmentID)";
+        String sql = "INSERT INTO MedicalRecord "
+                + "(PatientID, DoctorID, AppointmentID, RecordDate, "
+                + "Symptoms, Diagnosis, Treatment, Notes) "
+                + "SELECT a.PatientID, a.DoctorID, a.AppointmentID, "
+                + "?, ?, ?, ?, ? "
+                + "FROM Appointment a "
+                + "WHERE a.AppointmentID = ? "
+                + "AND a.Status = 'Completed' "
+                + "AND DATE(a.AppointmentDate) <= ? "
+                + "AND NOT EXISTS (SELECT 1 FROM MedicalRecord m "
+                + "WHERE m.AppointmentID = a.AppointmentID) ";
+
+        // Doctor can only add records for their own appointments
+
+        if ("Doctor".equals(role)) {
+
+            sql += "AND a.DoctorID = ? ";
+        }
 
         try (Connection con = TestConnection.makeConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
@@ -566,6 +850,11 @@ public class HospitalOperations {
             ps.setString(5, notes);
             ps.setInt(6, appointmentId);
             ps.setDate(7, java.sql.Date.valueOf(recordDate));
+
+            if ("Doctor".equals(role)) {
+
+                ps.setInt(8, doctorId);
+            }
 
             return ps.executeUpdate() > 0;
 
