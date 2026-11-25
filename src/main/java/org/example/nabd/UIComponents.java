@@ -1173,21 +1173,21 @@ public class UIComponents {
     }
 
     public static TableColumn<ObservableList<String>, Void>
-    createEditColumn(Consumer<ObservableList<String>> onEdit) {
+    createActionColumn(String buttonText, Consumer<ObservableList<String>> onAction) {
 
         TableColumn<ObservableList<String>, Void> column =
                 new TableColumn<>("Actions");
 
         column.setCellFactory(param -> new TableCell<>() {
 
-            private final Button editButton = new Button("Edit");
+            private final Button editButton = new Button(buttonText);
 
             {
                 editButton.setOnAction(e -> {
                     ObservableList<String> row =
                             getTableView().getItems().get(getIndex());
 
-                    onEdit.accept(row);
+                    onAction.accept(row);
                 });
             }
 
@@ -1200,6 +1200,11 @@ public class UIComponents {
         });
 
         return column;
+    }
+    public static TableColumn<ObservableList<String>, Void>
+    createEditColumn(Consumer<ObservableList<String>> onEdit) {
+
+        return createActionColumn("Edit", onEdit);
     }
 
     public static void showAppointmentDialog(
@@ -1313,7 +1318,94 @@ public class UIComponents {
         form.addRow(4, new Label("Reason"), reasonField);
         form.addRow(5, new Label("Status"), statusBox);
 
-        dialog.getDialogPane().setContent(form);
+        Label scheduleTitle = new Label("Doctor's Schedule");
+
+        scheduleTitle.setStyle(
+                "-fx-font-size: 18px;" +
+                        "-fx-font-weight: bold;" +
+                        "-fx-text-fill: #075D61;"
+        );
+
+        String[] scheduleColumns = {
+                "Time", "Status"
+        };
+
+        TableView<ObservableList<String>> scheduleTable =
+                UIComponents.createTable(scheduleColumns, false);
+
+        scheduleTable.setPrefWidth(280);
+        scheduleTable.setPrefHeight(350);
+
+        scheduleTable.setPlaceholder(
+                new Label("Select doctor and date")
+        );
+
+        Runnable refreshSchedule = () -> {
+
+            scheduleTable.getItems().clear();
+
+            if (doctorBox.getValue() == null
+                    || datePicker.getValue() == null) {
+
+                scheduleTable.setPlaceholder(
+                        new Label("Select doctor and date")
+                );
+
+                return;
+            }
+
+            String doctorId =
+                    doctorBox.getValue().split(" - ", 2)[0];
+
+            ObservableList<ObservableList<String>> appointments =
+                    operations.getAppointments(
+                            "DoctorName",
+                            "",
+                            "All Status",
+                            datePicker.getValue()
+                    );
+
+            for (ObservableList<String> appointment : appointments) {
+
+                if (doctorId.equals(appointment.get(8))) {
+
+                    scheduleTable.getItems().add(
+                            FXCollections.observableArrayList(
+                                    appointment.get(4),
+                                    appointment.get(6)
+                            )
+                    );
+                }
+            }
+
+            scheduleTable.setPlaceholder(
+                    new Label("No appointments for this date")
+            );
+        };
+
+
+
+        doctorBox.valueProperty().addListener(
+                (obs, oldValue, newValue) -> refreshSchedule.run()
+        );
+
+        datePicker.valueProperty().addListener(
+                (obs, oldValue, newValue) -> refreshSchedule.run()
+        );
+
+        refreshSchedule.run();
+
+        VBox scheduleBox = new VBox(
+                15, scheduleTitle, scheduleTable
+        );
+
+        scheduleBox.setPadding(new Insets(20));
+
+        HBox dialogContent = new HBox(
+                20, form, scheduleBox
+        );
+
+        dialog.getDialogPane().setContent(dialogContent);
 
         ButtonType saveType = new ButtonType(
                 "Save", ButtonBar.ButtonData.OK_DONE
@@ -1639,6 +1731,63 @@ public class UIComponents {
         window.setOnShown(event -> newPassword.requestFocus());
 
         window.showAndWait();
+    }
+
+    public static VBox createStatCard(
+            String title, long count, String color) {
+
+        Label titleLabel = new Label(title);
+
+        titleLabel.setStyle(
+                "-fx-font-size: 13px;" +
+                        "-fx-text-fill: #64748B;"
+        );
+
+        titleLabel.setWrapText(true);
+
+        Label countLabel = new Label(String.valueOf(count));
+
+        countLabel.setStyle(
+                "-fx-font-size: 32px;" +
+                        "-fx-font-weight: bold;" +
+                        "-fx-text-fill: " + color + ";"
+        );
+
+        VBox card = new VBox(12, titleLabel, countLabel);
+
+        card.setPadding(new Insets(20));
+        card.setPrefHeight(125);
+        card.setMinWidth(0);
+        card.setPrefWidth(0);
+        card.setMaxWidth(Double.MAX_VALUE);
+
+        card.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-background-radius: 10;" +
+                        "-fx-border-color: #E2E8F0;" +
+                        "-fx-border-radius: 10;"
+        );
+
+        HBox.setHgrow(card, Priority.ALWAYS);
+
+        return card;
+    }
+
+    public static Button createPrimaryButton(String text) {
+
+        Button button = new Button(text);
+
+        button.setStyle(
+                "-fx-background-color: #176B68;" +
+                        "-fx-text-fill: white;" +
+                        "-fx-font-size: 15px;" +
+                        "-fx-font-weight: bold;" +
+                        "-fx-background-radius: 8;" +
+                        "-fx-padding: 12 20;" +
+                        "-fx-cursor: hand;"
+        );
+
+        return button;
     }
 
 
