@@ -1,4 +1,3 @@
-
 package org.example.nabd;
 
 import javafx.beans.property.ReadOnlyStringWrapper;
@@ -9,16 +8,9 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.*;
 import java.sql.SQLException;
-import java.net.URL;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.function.Consumer;
 
 public class AdminDashboard {
@@ -52,13 +44,13 @@ public class AdminDashboard {
         VBox logoBox = UIComponents.createLogo(140, 140);
         logoBox.setPadding(new Insets(0, 0, 30, 5));
 
-        Button dashboard = menuButton("Dashboard");
-        Button departments = menuButton("Departments");
-        Button doctors = menuButton("Doctors");
-        Button patients = menuButton("Patients");
-        Button appointments = menuButton("Appointments");
-        Button medicalRecords = menuButton("Medical Records");
-        Button users = menuButton("Users");
+        Button dashboard = UIComponents.menuButton("Dashboard");
+        Button departments = UIComponents.menuButton("Departments");
+        Button doctors = UIComponents.menuButton("Doctors");
+        Button patients = UIComponents.menuButton("Patients");
+        Button appointments = UIComponents.menuButton("Appointments");
+        Button medicalRecords = UIComponents.menuButton("Medical Records");
+        Button users = UIComponents.menuButton("Users");
 
         dashboard.setOnAction(e -> showPage("Dashboard"));
         departments.setOnAction(e -> showPage("Departments"));
@@ -72,7 +64,7 @@ public class AdminDashboard {
 
         VBox.setVgrow(menu, Priority.ALWAYS);
 
-        Button logout = menuButton("Logout");
+        Button logout = UIComponents.menuButton("Logout");
 
         logout.setOnAction(e -> TestConnection.openLogin());
 
@@ -88,102 +80,18 @@ public class AdminDashboard {
     }
 
 
-    // ================= MENU BUTTON =================
-
-    private Button menuButton(String text) {
-
-        Button button = new Button(text);
-
-        button.setMaxWidth(Double.MAX_VALUE);
-        button.setPrefHeight(45);
-
-        button.setStyle(
-                "-fx-background-color: transparent;" +
-                        "-fx-text-fill: white;" +
-                        "-fx-font-size: 15px;" +
-                        "-fx-alignment: CENTER_LEFT;" +
-                        "-fx-padding: 12 18;" +
-                        "-fx-background-radius: 9;" +
-                        "-fx-cursor: hand;"
-        );
-
-        button.setOnMouseEntered(e ->
-                button.setStyle(
-                        "-fx-background-color: #187C7F;" +
-                                "-fx-text-fill: white;" +
-                                "-fx-font-size: 15px;" +
-                                "-fx-alignment: CENTER_LEFT;" +
-                                "-fx-padding: 12 18;" +
-                                "-fx-background-radius: 9;" +
-                                "-fx-cursor: hand;"
-                )
-        );
-
-        button.setOnMouseExited(e ->
-                button.setStyle(
-                        "-fx-background-color: transparent;" +
-                                "-fx-text-fill: white;" +
-                                "-fx-font-size: 15px;" +
-                                "-fx-alignment: CENTER_LEFT;" +
-                                "-fx-padding: 12 18;" +
-                                "-fx-background-radius: 9;" +
-                                "-fx-cursor: hand;"
-                )
-        );
-
-        return button;
-    }
-
     // ================= HEADER =================
 
     private void createHeader() {
-
         pageTitle = new Label("Dashboard");
-
-        pageTitle.setStyle(
-                "-fx-font-size: 22px;" +
-                        "-fx-font-weight: bold;" +
-                        "-fx-text-fill: " + PRIMARY + ";"
-        );
-
-        Label admin = new Label("Administrator");
-
-        admin.setStyle(
-                "-fx-font-size: 14px;" +
-                        "-fx-text-fill: #555555;"
-        );
-
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-
-        HBox header = new HBox(20, pageTitle, spacer, admin);
-
-        header.setAlignment(Pos.CENTER_LEFT);
-        header.setPadding(new Insets(0, 30, 0, 30));
-        header.setPrefHeight(75);
-
-        header.setStyle(
-                "-fx-background-color: white;" +
-                        "-fx-border-color: #E5E7EB;" +
-                        "-fx-border-width: 0 0 1 0;"
-        );
-
-        root.setTop(header);
+        root.setTop(UIComponents.createHeader(pageTitle, "Administrator"));
     }
 
     // ================= CONTENT =================
 
     private void setContent(Node node) {
-
         content = new VBox(node);
-        content.setPadding(new Insets(30));
-        content.setFillWidth(true);
-
-        ScrollPane scrollPane = new ScrollPane(content);
-        scrollPane.setFitToWidth(true);
-        scrollPane.setStyle("-fx-background: " + BACKGROUND + ";" + "-fx-background-color: transparent;");
-
-        root.setCenter(scrollPane);
+        root.setCenter(UIComponents.createContent(content));
     }
 
     // ================= DASHBOARD =================
@@ -191,6 +99,10 @@ public class AdminDashboard {
     private void showDashboard() {
 
         pageTitle.setText("Dashboard");
+
+        HospitalOperations operations = new HospitalOperations();
+
+        // Welcome Section
 
         Label welcome = new Label("Welcome, Administrator!");
 
@@ -209,57 +121,196 @@ public class AdminDashboard {
                         "-fx-text-fill: #777777;"
         );
 
-        HBox firstRow = new HBox(
-                20,
-                dashboardCard("Departments", "Departments"),
-                dashboardCard("Doctors", "Doctors"),
-                dashboardCard("Patients", "Patients")
+        VBox welcomeSection = new VBox(5, welcome, description);
+
+        // Statistics Cards
+
+        HBox firstRow = new HBox(15,
+
+                dashboardCard(
+                        "Total Patients",
+                        operations.getCount("Patient"),
+                        "Patients"
+                ),
+
+                dashboardCard(
+                        "Total Doctors",
+                        operations.getCount("Doctor"),
+                        "Doctors"
+                )
         );
 
-        HBox secondRow = new HBox(
-                20,
-                dashboardCard("Appointments", "Appointments"),
-                dashboardCard("Medical Records", "Medical Records"),
-                dashboardCard("Users", "Users")
+        HBox secondRow = new HBox(15,
+
+                dashboardCard(
+                        "Departments",
+                        operations.getCount("Department"),
+                        "Departments"
+                ),
+
+                dashboardCard(
+                        "Appointments",
+                        operations.getCount("Appointment"),
+                        "Appointments"
+                )
         );
+
+        firstRow.setPrefHeight(100);
+        firstRow.setMinHeight(80);
+        firstRow.setMaxHeight(Double.MAX_VALUE);
+
+        secondRow.setPrefHeight(100);
+        secondRow.setMinHeight(80);
+        secondRow.setMaxHeight(Double.MAX_VALUE);
+
+        VBox statistics = new VBox(12, firstRow, secondRow);
+
+        statistics.setMaxHeight(Double.MAX_VALUE);
+
+        VBox.setVgrow(firstRow, Priority.ALWAYS);
+        VBox.setVgrow(secondRow, Priority.ALWAYS);
+
+        // Quick Actions
+
+        Label quickActionsTitle = new Label("Quick Actions");
+
+        quickActionsTitle.setStyle(
+                "-fx-font-size: 20px;" +
+                        "-fx-font-weight: bold;" +
+                        "-fx-text-fill: " + PRIMARY + ";"
+        );
+
+        Button addPatient = quickActionButton(
+                "+ Add Patient",
+                () -> {
+                    UIComponents.showPatientDialog(null);
+                    showDashboard();
+                }
+        );
+
+        Button addDoctor = quickActionButton(
+                "+ Add Doctor",
+                () -> {
+                    showAddDoctorDialog();
+                    showDashboard();
+                }
+        );
+
+        Button addAppointment = quickActionButton(
+                "+ Add Appointment",
+                () -> {
+                    UIComponents.showAppointmentDialog(null, this::showAppointments);
+                    showDashboard();
+                }
+        );
+
+        Button addUser = quickActionButton(
+                "+ Add User",
+                () -> {
+                    showUserDialog(null);
+                    showDashboard();
+                }
+        );
+
+        HBox firstActionsRow = new HBox(
+                15, addPatient, addDoctor
+        );
+
+        HBox secondActionsRow = new HBox(
+                15, addAppointment, addUser
+        );
+
+        VBox quickActions = new VBox(
+                8,
+                quickActionsTitle,
+                firstActionsRow,
+                secondActionsRow
+        );
+
+        // Notifications
+
+        Label notificationsTitle = new Label("Notifications");
+
+        notificationsTitle.setStyle(
+                "-fx-font-size: 20px;" +
+                        "-fx-font-weight: bold;" +
+                        "-fx-text-fill: " + PRIMARY + ";"
+        );
+
+        int requestsCount = operations.getPasswordRequests().size();
+
+        Label requestsLabel = new Label("Pending Password Requests");
+
+        requestsLabel.setStyle(
+                "-fx-font-size: 15px;" +
+                        "-fx-text-fill: " + PRIMARY + ";"
+        );
+
+        Label countLabel = new Label(String.valueOf(requestsCount));
+
+        countLabel.setStyle(
+                "-fx-font-size: 18px;" +
+                        "-fx-font-weight: bold;" +
+                        "-fx-text-fill: " + PRIMARY + ";"
+        );
+
+        Region spacer = new Region();
+
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        Button viewRequests = new Button("View Requests");
+
+        viewRequests.setOnAction(e -> {
+            showPasswordRequests();
+            showDashboard();
+        });
+
+        HBox notificationCard = new HBox(
+                15,
+                requestsLabel,
+                spacer,
+                countLabel,
+                viewRequests
+        );
+
+        notificationCard.setAlignment(Pos.CENTER_LEFT);
+
+        notificationCard.setPadding(new Insets(12));
+
+        notificationCard.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-background-radius: 10;" +
+                        "-fx-border-color: #E5E7EB;" +
+                        "-fx-border-radius: 10;"
+        );
+
+        VBox notifications = new VBox(
+                8,
+                notificationsTitle,
+                notificationCard
+        );
+
+        // Dashboard Content
 
         VBox dashboardContent = new VBox(
-                25,
-                welcome,
-                description,
-                firstRow,
-                secondRow
+                15,
+                welcomeSection,
+                statistics,
+                quickActions,
+                notifications
         );
 
-        setContent(dashboardContent);
-    }
+        dashboardContent.setPadding(new Insets(20));
 
+        dashboardContent.setStyle(
+                "-fx-background-color: " + BACKGROUND + ";"
+        );
+
+        VBox.setVgrow(statistics, Priority.ALWAYS);
+
+        root.setCenter(dashboardContent);
+    }
     // ================= DASHBOARD CARD =================
-
-    private Button dashboardCard(String title, String destination) {
-
-        Button card = new Button(title);
-
-        card.setPrefHeight(140);
-        card.setMaxWidth(Double.MAX_VALUE);
-
-        HBox.setHgrow(card, Priority.ALWAYS);
-
-        card.setStyle(
-                "-fx-background-color: white;" +
-                        "-fx-text-fill: " + PRIMARY + ";" +
-                        "-fx-font-size: 18px;" +
-                        "-fx-font-weight: bold;" +
-                        "-fx-background-radius: 12;" +
-                        "-fx-border-color: #E5E7EB;" +
-                        "-fx-border-radius: 12;" +
-                        "-fx-cursor: hand;"
-        );
-
-        card.setOnAction(e -> showPage(destination));
-
-        return card;
-    }
 
     // ================= PAGES =================
 
@@ -287,6 +338,10 @@ public class AdminDashboard {
         }
         else if (name.equals("Medical Records")) {
             showMedicalRecords();
+            return;
+        }
+        else if(name.equals("Users")){
+            showUsers();
             return;
         }
 
@@ -338,23 +393,8 @@ public class AdminDashboard {
         searchBox.setAlignment(Pos.CENTER_LEFT);
 
         // Table
-        TableView<ObservableList<String>> table = new TableView<>();
-
         String[] columnNames = {"Department ID", "Department Name", "Location", "Phone"};
-
-        for (int i = 0; i < columnNames.length; i++) {
-
-            final int index = i;
-
-            TableColumn<ObservableList<String>, String> column =
-                    new TableColumn<>(columnNames[i]);
-
-            column.setCellValueFactory(data ->
-                    new ReadOnlyStringWrapper(data.getValue().get(index))
-            );
-
-            table.getColumns().add(column);
-        }
+        TableView<ObservableList<String>> table = UIComponents.createTable(columnNames, false);
 
 
         TableColumn<ObservableList<String>, Void> actionsColumn = createActionsColumn(
@@ -636,30 +676,8 @@ public class AdminDashboard {
 
         HBox searchBox = new HBox(10, searchBy, searchField);
 
-        TableView<ObservableList<String>> table = new TableView<>();
-
         String[] columnNames = {"Doctor ID", "Full Name", "Specialization", "Phone", "Email", "Department ID"};
-        for (int i = 0; i < columnNames.length; i++) {
-
-            final int index = i;
-
-            TableColumn<ObservableList<String>, String> column = new TableColumn<>(columnNames[i]);
-
-            column.setCellValueFactory(data -> {
-
-                ObservableList<String> row = data.getValue();
-
-                if (index == 1) {
-                    return new ReadOnlyStringWrapper(row.get(1) + " " + row.get(2));
-                }
-
-                int dataIndex = index > 1 ? index + 1 : index;
-
-                return new ReadOnlyStringWrapper(row.get(dataIndex));
-            });
-
-            table.getColumns().add(column);
-        }
+        TableView<ObservableList<String>> table = UIComponents.createTable(columnNames, true);
         TableColumn<ObservableList<String>, Void> actionsColumn =
                 createActionsColumn(row -> showEditDoctorDialog(row),
                         row -> confirmDelete("Doctor", "DoctorID", Integer.parseInt(row.get(0)), "Doctors"));
@@ -812,7 +830,7 @@ public class AdminDashboard {
         HospitalOperations operations = new HospitalOperations();
         boolean deleted = operations.deleteData(tableName, idColumn, id);
         UIComponents.showAlert(deleted ? Alert.AlertType.INFORMATION : Alert.AlertType.ERROR, deleted ? tableName +
-                        " deleted successfully." : "Failed to delete " + tableName + ".");
+                " deleted successfully." : "Failed to delete " + tableName + ".");
 
         if (deleted) {
             showPage(pageName);
@@ -944,8 +962,6 @@ public class AdminDashboard {
         HBox searchBox = new HBox(10, searchBy, searchField);
         searchBox.setAlignment(Pos.CENTER_LEFT);
 
-        TableView<ObservableList<String>> table = new TableView<>();
-
         String[] columnNames = {
                 "Patient ID",
                 "Full Name",
@@ -956,23 +972,7 @@ public class AdminDashboard {
                 "Address",
                 "Blood Type"
         };
-
-        for (int i = 0; i < columnNames.length; i++) {
-            final int index = i;
-            TableColumn<ObservableList<String>, String> column = new TableColumn<>(columnNames[i]);
-            column.setCellValueFactory(data -> {
-                ObservableList<String> row = data.getValue();
-
-                if (index == 1) {
-                    return new ReadOnlyStringWrapper(row.get(1) + " " + row.get(2));
-                }
-
-                int dataIndex = index > 1 ? index + 1 : index;
-
-                return new ReadOnlyStringWrapper(row.get(dataIndex));
-            });
-            table.getColumns().add(column);
-        }
+        TableView<ObservableList<String>> table = UIComponents.createTable(columnNames, true);
         table.getColumns().add(createActionsColumn(
                 row -> {
                     if (UIComponents.showPatientDialog(row) > 0) {
@@ -997,314 +997,7 @@ public class AdminDashboard {
     }
 
 
-    private void showAppointmentDialog(ObservableList<String> row) {
 
-        boolean isEdit = row != null;
-
-        Dialog<ButtonType> dialog = new Dialog<>();
-        dialog.setTitle(isEdit ? "Edit Appointment" : "Add Appointment");
-        dialog.setHeaderText("Appointment Information");
-
-        HospitalOperations operations = new HospitalOperations();
-
-        ComboBox<String> patientBox = new ComboBox<>();
-        TextField patientSearch = new TextField();
-        patientSearch.setPromptText("Search by ID, name or phone...");
-
-        ComboBox<String> doctorBox = new ComboBox<>();
-        TextField doctorSearch = new TextField();
-        doctorSearch.setPromptText("Search by ID, name or specialization...");
-
-        DatePicker datePicker = new DatePicker();
-        datePicker.setEditable(false);
-
-        ComboBox<LocalTime> timeBox = new ComboBox<>();
-
-        TextField reasonField = new TextField();
-
-        ComboBox<String> statusBox = new ComboBox<>();
-        statusBox.getItems().addAll("Scheduled", "Completed", "Cancelled");
-        statusBox.setValue("Scheduled");
-
-        // Load patients
-        UIComponents.loadPatients(patientBox,
-                isEdit ? Integer.parseInt(row.get(7)) : -1);
-
-        UIComponents.setupComboBoxSearch(
-                patientBox,
-                patientSearch,
-                () -> UIComponents.loadPatients(patientBox, -1)
-        );
-
-        // Add new patient
-        Button newPatientButton = new Button("+ New Patient");
-
-        newPatientButton.setOnAction(e -> {
-
-            int newPatientId = UIComponents.showPatientDialog(null);
-
-            if (newPatientId > 0) {
-                patientSearch.clear();
-                UIComponents.loadPatients(patientBox, newPatientId);
-            }
-        });
-
-        // Load doctors
-        UIComponents.loadDoctors(doctorBox,
-                isEdit ? Integer.parseInt(row.get(8)) : -1);
-
-        UIComponents.setupComboBoxSearch(
-                doctorBox,
-                doctorSearch,
-                () -> UIComponents.loadDoctors(doctorBox, -1)
-        );
-
-        // Available time options
-        for (int i = 0; i < 48; i++) {
-            timeBox.getItems().add(
-                    LocalTime.MIDNIGHT.plusMinutes(i * 30L)
-            );
-        }
-
-        // Fill existing data when editing
-        if (isEdit) {
-
-            datePicker.setValue(LocalDate.parse(row.get(3)));
-
-            LocalTime existingTime = LocalTime.parse(row.get(4));
-
-            if (!timeBox.getItems().contains(existingTime)) {
-                timeBox.getItems().add(existingTime);
-            }
-
-            timeBox.setValue(existingTime);
-            reasonField.setText(row.get(5));
-            statusBox.setValue(row.get(6));
-        }
-
-        patientBox.setPrefWidth(250);
-        doctorBox.setPrefWidth(250);
-        datePicker.setPrefWidth(250);
-        timeBox.setPrefWidth(250);
-        statusBox.setPrefWidth(250);
-
-        HBox patientRow = new HBox(10, patientBox, newPatientButton);
-        patientRow.setAlignment(Pos.CENTER_LEFT);
-
-        VBox patientContainer = new VBox(8, patientSearch, patientRow);
-        VBox doctorContainer = new VBox(8, doctorSearch, doctorBox);
-
-        GridPane form = new GridPane();
-
-        form.setHgap(15);
-        form.setVgap(15);
-        form.setPadding(new Insets(20));
-
-        form.addRow(0, new Label("Patient"), patientContainer);
-        form.addRow(1, new Label("Doctor"), doctorContainer);
-        form.addRow(2, new Label("Appointment Date"), datePicker);
-        form.addRow(3, new Label("Appointment Time"), timeBox);
-        form.addRow(4, new Label("Reason"), reasonField);
-        form.addRow(5, new Label("Status"), statusBox);
-
-        dialog.getDialogPane().setContent(form);
-
-        ButtonType saveType = new ButtonType(
-                "Save", ButtonBar.ButtonData.OK_DONE
-        );
-
-        dialog.getDialogPane().getButtonTypes().addAll(
-                saveType, ButtonType.CANCEL
-        );
-
-        Button save = (Button) dialog.getDialogPane().lookupButton(saveType);
-
-        save.setDefaultButton(false);
-
-        UIComponents.setupKeyboardNavigation(
-                dialog,
-                patientSearch,
-                patientBox,
-                doctorSearch,
-                doctorBox,
-                datePicker,
-                timeBox,
-                reasonField,
-                statusBox,
-                save
-        );
-
-        save.addEventFilter(ActionEvent.ACTION, event -> {
-
-            // Required fields validation
-            if (patientBox.getValue() == null
-                    || doctorBox.getValue() == null
-                    || datePicker.getValue() == null
-                    || timeBox.getValue() == null
-                    || statusBox.getValue() == null) {
-
-                UIComponents.showAlert(
-                        Alert.AlertType.WARNING,
-                        "Please fill in all required fields."
-                );
-
-                event.consume();
-                return;
-            }
-
-            int patientId = Integer.parseInt(
-                    patientBox.getValue().split(" - ", 2)[0]
-            );
-
-            int doctorId = Integer.parseInt(
-                    doctorBox.getValue().split(" - ", 2)[0]
-            );
-
-            LocalDateTime appointmentDate = LocalDateTime.of(
-                    datePicker.getValue(),
-                    timeBox.getValue()
-            );
-
-            String reason = reasonField.getText().trim();
-            String status = statusBox.getValue();
-
-            // Date validation
-            if (status.equals("Scheduled")
-                    && appointmentDate.isBefore(LocalDateTime.now())) {
-
-                UIComponents.showAlert(
-                        Alert.AlertType.WARNING,
-                        "Scheduled appointments cannot be in the past."
-                );
-
-                event.consume();
-                return;
-            }
-
-            if (status.equals("Completed")
-                    && appointmentDate.isAfter(LocalDateTime.now())) {
-
-                UIComponents.showAlert(
-                        Alert.AlertType.WARNING,
-                        "Completed appointments cannot be in the future."
-                );
-
-                event.consume();
-                return;
-            }
-
-            // Reason validation
-            if (reason.length() > 255) {
-
-                UIComponents.showAlert(
-                        Alert.AlertType.WARNING,
-                        "Reason cannot exceed 255 characters."
-                );
-
-                event.consume();
-                return;
-            }
-
-            int appointmentId = isEdit
-                    ? Integer.parseInt(row.get(0))
-                    : 0;
-
-            try {
-
-                // Protect appointments linked to medical records
-                if (isEdit && operations.hasMedicalRecord(appointmentId)) {
-
-                    if (patientId != Integer.parseInt(row.get(7))
-                            || doctorId != Integer.parseInt(row.get(8))
-                            || status.equals("Cancelled")) {
-
-                        UIComponents.showAlert(
-                                Alert.AlertType.WARNING,
-                                "Cannot change the patient, doctor or cancel an appointment linked to a medical record."
-                        );
-
-                        event.consume();
-                        return;
-                    }
-                }
-
-                // Check appointment conflicts
-                if (!status.equals("Cancelled")
-                        && operations.hasAppointmentConflict(
-                        appointmentId,
-                        patientId,
-                        doctorId,
-                        appointmentDate
-                )) {
-
-                    UIComponents.showAlert(
-                            Alert.AlertType.WARNING,
-                            "The doctor or patient already has an appointment at this time."
-                    );
-
-                    event.consume();
-                    return;
-                }
-
-            } catch (SQLException | ClassNotFoundException e) {
-
-                UIComponents.showAlert(
-                        Alert.AlertType.ERROR,
-                        "Unable to validate appointment."
-                );
-
-                event.consume();
-                return;
-            }
-
-            boolean success;
-
-            if (isEdit) {
-
-                success = operations.updateAppointment(
-                        appointmentId,
-                        patientId,
-                        doctorId,
-                        appointmentDate,
-                        reason,
-                        status
-                );
-
-            } else {
-
-                success = operations.addAppointment(
-                        patientId,
-                        doctorId,
-                        appointmentDate,
-                        reason,
-                        status
-                );
-            }
-
-            if (success) {
-
-                UIComponents.showAlert(
-                        Alert.AlertType.INFORMATION,
-                        isEdit
-                                ? "Appointment updated successfully."
-                                : "Appointment added successfully."
-                );
-
-                showAppointments();
-
-            } else {
-
-                UIComponents.showAlert(
-                        Alert.AlertType.ERROR,
-                        "Failed to save appointment."
-                );
-
-                event.consume();
-            }
-        });
-
-        dialog.showAndWait();
-    }
 
     private void showAppointments() {
 
@@ -1312,7 +1005,7 @@ public class AdminDashboard {
 
         Label title = new Label("Appointments");
         Button addButton = new Button("+ Add Appointment");
-        addButton.setOnAction(e -> showAppointmentDialog(null));
+        addButton.setOnAction(e -> UIComponents.showAppointmentDialog(null, this::showAppointments));
 
         HBox header = new HBox(15, title, addButton);
         header.setAlignment(Pos.CENTER_LEFT);
@@ -1363,25 +1056,10 @@ public class AdminDashboard {
         HBox.setHgrow(searchField, Priority.ALWAYS);
 
         // Table
-        TableView<ObservableList<String>> table = new TableView<>();
-
         String[] columnNames = {"ID", "Patient", "Doctor", "Date", "Time", "Reason", "Status"};
-
-        for (int i = 0; i < columnNames.length; i++) {
-
-            final int index = i;
-
-            TableColumn<ObservableList<String>, String> column =
-                    new TableColumn<>(columnNames[i]);
-
-            column.setCellValueFactory(data ->
-                    new ReadOnlyStringWrapper(data.getValue().get(index))
-            );
-
-            table.getColumns().add(column);
-        }
+        TableView<ObservableList<String>> table = UIComponents.createTable(columnNames, false);
         table.getColumns().add(createActionsColumn(
-                row -> showAppointmentDialog(row),
+                row -> UIComponents.showAppointmentDialog(row, this::showAppointments),
                 row -> confirmDelete("Appointment", "AppointmentID",
                         Integer.parseInt(row.get(0)), "Appointments")
         ));
@@ -1460,8 +1138,6 @@ public class AdminDashboard {
         HBox.setHgrow(searchField, Priority.ALWAYS);
 
         // Table
-        TableView<ObservableList<String>> table = new TableView<>();
-
         String[] columnNames = {
                 "Record ID",
                 "Patient",
@@ -1469,20 +1145,7 @@ public class AdminDashboard {
                 "Appointment ID",
                 "Record Date"
         };
-
-        for (int i = 0; i < columnNames.length; i++) {
-
-            final int index = i;
-
-            TableColumn<ObservableList<String>, String> column =
-                    new TableColumn<>(columnNames[i]);
-
-            column.setCellValueFactory(data ->
-                    new ReadOnlyStringWrapper(data.getValue().get(index))
-            );
-
-            table.getColumns().add(column);
-        }
+        TableView<ObservableList<String>> table = UIComponents.createTable(columnNames, false);
 
         // Load data
         HospitalOperations operations = new HospitalOperations();
@@ -1543,6 +1206,861 @@ public class AdminDashboard {
 
         setContent(page);
     }
+    private void showUsers() {
+
+        pageTitle.setText("Users Management");
+
+        Label title = new Label("Users Management");
+
+        Button addButton = new Button("+ Add User");
+        addButton.setOnAction(e -> showUserDialog(null));
+        Button requestsButton = new Button("Password Requests (" + new HospitalOperations().getPasswordRequests().size() + ")");
+        requestsButton.setOnAction(e -> showPasswordRequests());
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        HBox header = new HBox(15, title, spacer,
+                requestsButton, addButton);
+
+        header.setAlignment(Pos.CENTER_LEFT);
+
+        // Search
+        TextField searchField = new TextField();
+        searchField.setPromptText("Search by username or full name...");
+
+        // Role filter
+        ComboBox<String> roleFilter = new ComboBox<>();
+
+        roleFilter.getItems().addAll("All Roles", "Administrator", "Doctor", "Receptionist");
+
+        roleFilter.setValue("All Roles");
+
+        // Status filter
+        ComboBox<String> statusFilter = new ComboBox<>();
+
+        statusFilter.getItems().addAll("All Status", "Active", "Inactive");
+
+        statusFilter.setValue("All Status");
+
+        Button clearButton = new Button("Clear Filters");
+
+        HBox searchBox = new HBox(10, searchField,
+                roleFilter, statusFilter, clearButton);
+
+        searchBox.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(searchField, Priority.ALWAYS);
+
+        // Users table
+        TableView<ObservableList<String>> table = new TableView<>();
+
+        String[] columnNames = {"ID", "Username", "Full Name", "Role", "Status"};
+
+        for (int i = 0; i < columnNames.length; i++) {
+
+            final int index = i;
+
+            TableColumn<ObservableList<String>, String> column =
+                    new TableColumn<>(columnNames[i]);
+
+            column.setCellValueFactory(data -> {
+
+                String value = data.getValue().get(index);
+
+                if (index == 4) {
+                    value = ("1".equals(value) || "true".equalsIgnoreCase(value)) ? "Active" : "Inactive";
+                }
+
+                return new ReadOnlyStringWrapper(value);
+            });
+
+            table.getColumns().add(column);
+        }
+        table.getColumns().add(createUserActionsColumn());
+
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        HospitalOperations operations = new HospitalOperations();
+
+        Runnable refresh = () -> table.setItems(operations.getUsers(searchField.getText().trim(), roleFilter.getValue(), statusFilter.getValue()));
+
+        searchField.textProperty().addListener((obs, oldValue, newValue) -> refresh.run());
+
+        roleFilter.setOnAction(e -> refresh.run());
+
+        statusFilter.setOnAction(e -> refresh.run());
+
+        clearButton.setOnAction(e -> {
+            searchField.clear();
+            roleFilter.setValue("All Roles");
+            statusFilter.setValue("All Status");
+            refresh.run();
+        });
+
+        refresh.run();
+
+        VBox page = new VBox(15, header, searchBox, table);
+
+        page.setPadding(new Insets(20));
+
+        setContent(page);
+    }
+    private void showUserDialog(ObservableList<String> row) {
+
+        boolean isEdit = row != null;
+
+        int userId = isEdit ? Integer.parseInt(row.get(0)) : 0;
+
+        Dialog<ButtonType> dialog = new Dialog<>();
+
+        dialog.setTitle(isEdit ? "Manage User" : "Add User");
+        dialog.setHeaderText("User Information");
+
+        HospitalOperations operations = new HospitalOperations();
+
+        ComboBox<String> roleBox = new ComboBox<>();
+
+        roleBox.getItems().addAll(
+                "Administrator",
+                "Doctor",
+                "Receptionist"
+        );
+
+        roleBox.setPromptText("Select Role");
+
+        TextField fullNameField = new TextField();
+        fullNameField.setPromptText("Enter full name");
+
+        TextField usernameField = new TextField();
+
+        PasswordField passwordField = new PasswordField();
+        PasswordField confirmPasswordField = new PasswordField();
+
+        CheckBox activeBox = new CheckBox("Active Account");
+        activeBox.setSelected(true);
+
+        ObservableList<ObservableList<String>> doctors =
+                operations.getDoctorsWithoutAccounts(userId);
+
+        ContextMenu doctorSuggestions = new ContextMenu();
+
+        Integer[] selectedDoctorId = {null};
+        boolean[] selectingDoctor = {false};
+
+        Runnable showDoctorSuggestions = () -> {
+
+            doctorSuggestions.hide();
+            doctorSuggestions.getItems().clear();
+
+            if (!"Doctor".equals(roleBox.getValue())) {
+                return;
+            }
+
+            String search = fullNameField.getText().trim()
+                    .toLowerCase(java.util.Locale.ROOT);
+
+            for (ObservableList<String> doctor : doctors) {
+
+                String fullName =
+                        doctor.get(1) + " " + doctor.get(2);
+
+                String specialization = doctor.get(3);
+
+                if (fullName.toLowerCase(java.util.Locale.ROOT)
+                        .contains(search)) {
+
+                    MenuItem item = new MenuItem(
+                            fullName + " - " + specialization
+                    );
+
+                    item.setOnAction(e -> {
+
+                        selectingDoctor[0] = true;
+
+                        fullNameField.setText(fullName);
+
+                        selectedDoctorId[0] =
+                                Integer.parseInt(doctor.get(0));
+
+                        selectingDoctor[0] = false;
+
+                        doctorSuggestions.hide();
+                    });
+
+                    doctorSuggestions.getItems().add(item);
+                }
+            }
+
+            if (doctorSuggestions.getItems().isEmpty()) {
+
+                MenuItem noResults =
+                        new MenuItem("No available doctors found");
+
+                noResults.setDisable(true);
+
+                doctorSuggestions.getItems().add(noResults);
+            }
+
+            doctorSuggestions.show(
+                    fullNameField,
+                    javafx.geometry.Side.BOTTOM,
+                    0, 0
+            );
+        };
+
+        // Handle role changes
+
+        roleBox.valueProperty().addListener(
+                (obs, oldValue, newValue) -> {
+
+                    doctorSuggestions.hide();
+
+                    selectedDoctorId[0] = null;
+
+                    selectingDoctor[0] = true;
+
+                    if ("Doctor".equals(newValue) ||
+                            "Doctor".equals(oldValue)) {
+                        fullNameField.clear();
+                    }
+
+                    selectingDoctor[0] = false;
+
+                    fullNameField.setPromptText(
+                            "Doctor".equals(newValue)
+                                    ? "Search or select doctor..."
+                                    : "Enter full name"
+                    );
+                }
+        );
+
+        fullNameField.setOnMouseClicked(e -> {
+
+            if ("Doctor".equals(roleBox.getValue())) {
+                showDoctorSuggestions.run();
+            }
+        });
+
+        fullNameField.textProperty().addListener(
+                (obs, oldValue, newValue) -> {
+
+                    if (selectingDoctor[0]) {
+                        return;
+                    }
+
+                    selectedDoctorId[0] = null;
+
+                    if ("Doctor".equals(roleBox.getValue())
+                            && fullNameField.isFocused()) {
+
+                        showDoctorSuggestions.run();
+                    }
+                }
+        );
+
+        // Load existing user information
+
+        if (isEdit) {
+
+            roleBox.setValue(row.get(3));
+
+            selectingDoctor[0] = true;
+
+            usernameField.setText(row.get(1));
+            fullNameField.setText(row.get(2));
+
+            activeBox.setSelected(
+                    "1".equals(row.get(4)) ||
+                            "true".equalsIgnoreCase(row.get(4))
+            );
+
+            if ("Doctor".equals(row.get(3))) {
+
+                try {
+
+                    selectedDoctorId[0] =
+                            operations.getLinkedDoctor(userId);
+
+                    for (ObservableList<String> doctor : doctors) {
+
+                        if (Integer.valueOf(doctor.get(0))
+                                .equals(selectedDoctorId[0])) {
+
+                            fullNameField.setText(
+                                    doctor.get(1) + " " + doctor.get(2)
+                            );
+
+                            break;
+                        }
+                    }
+
+                } catch (SQLException | ClassNotFoundException e) {
+
+                    UIComponents.showAlert(
+                            Alert.AlertType.ERROR,
+                            "Unable to load linked doctor."
+                    );
+
+                    return;
+                }
+            }
+
+            selectingDoctor[0] = false;
+        }
+
+        roleBox.setPrefWidth(250);
+        fullNameField.setPrefWidth(250);
+        usernameField.setPrefWidth(250);
+        passwordField.setPrefWidth(250);
+        confirmPasswordField.setPrefWidth(250);
+
+        GridPane form = new GridPane();
+
+        form.setHgap(15);
+        form.setVgap(15);
+        form.setPadding(new Insets(20));
+
+        int index = 0;
+
+        if (isEdit) {
+
+            TextField idField = new TextField(
+                    String.valueOf(userId)
+            );
+
+            idField.setEditable(false);
+
+            form.addRow(index++, new Label("User ID"), idField);
+        }
+
+        form.addRow(index++, new Label("Role"), roleBox);
+        form.addRow(index++, new Label("Full Name"), fullNameField);
+        form.addRow(index++, new Label("Username"), usernameField);
+
+        if (!isEdit) {
+
+            form.addRow(index++, new Label("Temporary Password"), passwordField);
+
+            form.addRow(index++, new Label("Confirm Password"),
+                    confirmPasswordField);
+        }
+
+        form.add(activeBox, 1, index);
+
+        dialog.getDialogPane().setContent(form);
+
+        ButtonType saveType = new ButtonType(
+                isEdit ? "Save Changes" : "Save",
+                ButtonBar.ButtonData.OK_DONE
+        );
+
+        dialog.getDialogPane().getButtonTypes().addAll(
+                saveType, ButtonType.CANCEL
+        );
+
+        Button save = (Button) dialog.getDialogPane()
+                .lookupButton(saveType);
+
+        save.setDefaultButton(false);
+
+        save.addEventFilter(ActionEvent.ACTION, event -> {
+
+            doctorSuggestions.hide();
+
+            String role = roleBox.getValue();
+            String fullName = fullNameField.getText().trim();
+            String username = usernameField.getText().trim();
+            String password = passwordField.getText();
+
+            if (role == null || fullName.isEmpty() ||
+                    username.isEmpty()) {
+
+                UIComponents.showAlert(
+                        Alert.AlertType.WARNING,
+                        "Please fill in all required fields."
+                );
+
+                event.consume();
+                return;
+            }
+
+            if ("Doctor".equals(role) &&
+                    selectedDoctorId[0] == null) {
+
+                UIComponents.showAlert(
+                        Alert.AlertType.WARNING,
+                        "Please select a doctor from the search results."
+                );
+
+                event.consume();
+                return;
+            }
+
+            if (username.length() > 50 ||
+                    fullName.length() > 120) {
+
+                UIComponents.showAlert(
+                        Alert.AlertType.WARNING,
+                        "Username or full name is too long."
+                );
+
+                event.consume();
+                return;
+            }
+
+            // Validate password only when adding a user
+
+            if (!isEdit) {
+
+                if (password.isBlank()) {
+                    UIComponents.showAlert(Alert.AlertType.WARNING, "Please enter a password.");
+                    event.consume();
+                    return;
+                }
+
+                if (!password.equals(confirmPasswordField.getText())) {
+
+                    UIComponents.showAlert(
+                            Alert.AlertType.WARNING,
+                            "Passwords do not match."
+                    );
+
+                    event.consume();
+                    return;
+                }
+
+                if (password.getBytes(
+                        java.nio.charset.StandardCharsets.UTF_8
+                ).length > 72) {
+                    UIComponents.showAlert(Alert.AlertType.WARNING, "Password exceeds the supported length.");
+                    event.consume();
+                    return;
+                }
+            }
+
+            try {
+
+                if (operations.isUsernameExists(username, userId)) {
+                    UIComponents.showAlert(Alert.AlertType.WARNING, "Username already exists.");
+                    event.consume();
+                    return;
+                }
+
+            } catch (SQLException | ClassNotFoundException e) {
+                UIComponents.showAlert(Alert.AlertType.ERROR, "Unable to check username availability.");
+                event.consume();
+                return;
+            }
+            // Protect the last active administrator
+
+            if (isEdit && (!role.equals("Administrator") || !activeBox.isSelected())) {
+
+                try {
+
+                    if (operations.isLastActiveAdministrator(userId)) {
+
+                        UIComponents.showAlert(
+                                Alert.AlertType.WARNING,
+                                "Cannot deactivate or change the role of the last active administrator."
+                        );
+
+                        event.consume();
+                        return;
+                    }
+
+                } catch (SQLException | ClassNotFoundException e) {
+
+                    UIComponents.showAlert(
+                            Alert.AlertType.ERROR,
+                            "Unable to verify administrator status."
+                    );
+
+                    event.consume();
+                    return;
+                }
+            }
+
+            Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION, isEdit ?
+                    "Are you sure you want to update this user?" : "Are you sure you want to add this user?",
+                    ButtonType.YES, ButtonType.NO);
+
+            if (confirmation.showAndWait().orElse(ButtonType.NO)
+                    != ButtonType.YES) {
+
+                event.consume();
+                return;
+            }
+
+            boolean success;
+
+            if (isEdit) {
+                success = operations.updateUser(userId, username, fullName, role, activeBox.isSelected(), selectedDoctorId[0]);
+            } else {
+                success = operations.addUser(username, fullName, password, role, activeBox.isSelected(), selectedDoctorId[0]);
+            }
+
+            if (success) {
+                UIComponents.showAlert(Alert.AlertType.INFORMATION, isEdit ? "User updated successfully." : "User added successfully.");
+                showUsers();
+
+            } else {
+                UIComponents.showAlert(Alert.AlertType.ERROR, "Failed to save user.");
+                event.consume();
+            }});
+
+        dialog.setOnHidden(e -> doctorSuggestions.hide());
+
+        dialog.showAndWait();
+    }
+    private TableColumn<ObservableList<String>, Void> createUserActionsColumn() {
+
+        TableColumn<ObservableList<String>, Void> column =
+                new TableColumn<>("Actions");
+
+        column.setCellFactory(param -> new TableCell<>() {
+
+            private final Button manageButton = new Button("Manage");
+
+            private final Button resetButton = new Button("Reset Password");
+
+            private final HBox buttons =
+                    new HBox(10, manageButton, resetButton);
+
+            {
+                buttons.setAlignment(Pos.CENTER);
+
+                manageButton.setOnAction(e -> {
+
+                    ObservableList<String> row =
+                            getTableRow().getItem();
+
+                    if (row != null) {
+                        showUserDialog(row);
+                    }
+                });
+
+                resetButton.setOnAction(e -> {
+
+                    ObservableList<String> row =
+                            getTableRow().getItem();
+
+                    if (row != null) {
+
+                        if (showResetPasswordDialog(row)) {
+                            showUsers();
+                        }
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+
+                super.updateItem(item, empty);
+
+                ObservableList<String> row =
+                        getTableRow() == null
+                                ? null
+                                : getTableRow().getItem();
+
+                if (empty || row == null) {
+
+                    setGraphic(null);
+
+                } else {
+
+                    boolean isActive =
+                            "1".equals(row.get(4)) ||
+                                    "true".equalsIgnoreCase(row.get(4));
+
+                    resetButton.setDisable(!isActive);
+
+                    setGraphic(buttons);
+                }
+            }
+        });
+
+        column.setPrefWidth(230);
+        column.setSortable(false);
+
+        return column;
+    }
+    private boolean showResetPasswordDialog(ObservableList<String> row) {
+
+        Dialog<ButtonType> dialog = new Dialog<>();
+
+        dialog.setTitle("Reset Password");
+        dialog.setHeaderText("Set Temporary Password");
+
+        int userId = Integer.parseInt(row.get(0));
+
+        HospitalOperations operations = new HospitalOperations();
+
+        PasswordField passwordField = new PasswordField();
+        PasswordField confirmPasswordField = new PasswordField();
+
+        passwordField.setPromptText("Enter temporary password");
+        confirmPasswordField.setPromptText("Confirm password");
+
+        passwordField.setPrefWidth(250);
+        confirmPasswordField.setPrefWidth(250);
+
+        GridPane form = new GridPane();
+
+        form.setHgap(15);
+        form.setVgap(15);
+        form.setPadding(new Insets(20));
+
+        form.addRow(0, new Label("Username"), new Label(row.get(1)));
+        form.addRow(1, new Label("Full Name"), new Label(row.get(2)));
+        form.addRow(2, new Label("Role"), new Label(row.get(3)));
+        form.addRow(3, new Label("Temporary Password"), passwordField);
+        form.addRow(4, new Label("Confirm Password"), confirmPasswordField);
+
+        Label note = new Label(
+                "The user must change their password on the next login."
+        );
+
+        note.setWrapText(true);
+
+        form.add(note, 0, 5, 2, 1);
+
+        dialog.getDialogPane().setContent(form);
+
+        ButtonType resetType = new ButtonType(
+                "Reset Password",
+                ButtonBar.ButtonData.OK_DONE
+        );
+
+        dialog.getDialogPane().getButtonTypes().addAll(
+                resetType, ButtonType.CANCEL
+        );
+
+        Button resetButton = (Button) dialog.getDialogPane()
+                .lookupButton(resetType);
+
+        resetButton.setDefaultButton(false);
+
+        UIComponents.setupKeyboardNavigation(
+                dialog,
+                passwordField,
+                confirmPasswordField,
+                resetButton
+        );
+
+        boolean[] success = {false};
+
+        resetButton.addEventFilter(ActionEvent.ACTION, event -> {
+
+            String password = passwordField.getText();
+
+            if (password.isBlank()) {
+
+                UIComponents.showAlert(
+                        Alert.AlertType.WARNING,
+                        "Please enter a temporary password."
+                );
+
+                event.consume();
+                return;
+            }
+
+            if (!password.equals(confirmPasswordField.getText())) {
+
+                UIComponents.showAlert(
+                        Alert.AlertType.WARNING,
+                        "Passwords do not match."
+                );
+
+                event.consume();
+                return;
+            }
+
+            if (password.getBytes(
+                    java.nio.charset.StandardCharsets.UTF_8
+            ).length > 72) {
+
+                UIComponents.showAlert(
+                        Alert.AlertType.WARNING,
+                        "Password exceeds the supported length."
+                );
+
+                event.consume();
+                return;
+            }
+
+            Alert confirmation = new Alert(
+                    Alert.AlertType.CONFIRMATION,
+                    "Are you sure you want to reset this user's password?",
+                    ButtonType.YES,
+                    ButtonType.NO
+            );
+
+            if (confirmation.showAndWait().orElse(ButtonType.NO)
+                    != ButtonType.YES) {
+
+                event.consume();
+                return;
+            }
+
+            success[0] = operations.resetPassword(userId, password);
+
+            if (success[0]) {
+
+                UIComponents.showAlert(
+                        Alert.AlertType.INFORMATION,
+                        "Temporary password set successfully."
+                );
+
+            } else {
+
+                UIComponents.showAlert(Alert.AlertType.ERROR, "Failed to reset password.");
+
+                event.consume();
+            }
+        });
+
+        dialog.showAndWait();
+
+        return success[0];
+    }
 
 
+    private void showPasswordRequests() {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Password Requests");
+        dialog.setHeaderText("Pending Password Reset Requests");
+        HospitalOperations operations = new HospitalOperations();
+        VBox requestsBox = new VBox(15);
+        requestsBox.setPadding(new Insets(15));
+        ObservableList<ObservableList<String>> requests = operations.getPasswordRequests();
+
+        for (ObservableList<String> row : requests) {
+            int userId = Integer.parseInt(row.get(0));
+            Label fullName = new Label(row.get(2));
+            Label username = new Label("Username: " + row.get(1));
+            Label role = new Label("Role: " + row.get(3));
+            Button rejectButton = new Button("Reject");
+            Button resetButton = new Button("Set Temporary Password");
+            HBox buttons = new HBox(10, rejectButton, resetButton);
+            buttons.setAlignment(Pos.CENTER_RIGHT);
+            VBox requestCard = new VBox(8, fullName, username, role, buttons);
+            requestCard.setPadding(new Insets(15));
+            requestCard.setStyle("-fx-border-color: #DDE5E5;-fx-border-radius: 8;");
+
+            Runnable removeRequest = () -> {
+                requestsBox.getChildren().remove(requestCard);
+                if (requestsBox.getChildren().isEmpty()) {
+                    requestsBox.getChildren().add(new Label("No pending password reset requests."));
+                }
+            };
+
+            rejectButton.setOnAction(e -> {
+                Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION,
+                        "Are you sure you want to reject this request?", ButtonType.YES, ButtonType.NO);
+                if (confirmation.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) {
+                    return;
+                }
+                if (operations.rejectPasswordRequest(userId)) {
+                    UIComponents.showAlert(Alert.AlertType.INFORMATION, "Request rejected successfully.");
+                    removeRequest.run();
+                } else {
+                    UIComponents.showAlert(Alert.AlertType.ERROR, "Failed to reject request.");
+                }
+            });
+
+            resetButton.setOnAction(e -> {
+                if (showResetPasswordDialog(row)) {
+                    removeRequest.run();
+                }
+            });
+            requestsBox.getChildren().add(requestCard);
+        }
+        if (requestsBox.getChildren().isEmpty()) {
+            requestsBox.getChildren().add(new Label("No pending password reset requests."));
+        }
+        ScrollPane scrollPane = new ScrollPane(requestsBox);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setPrefViewportWidth(500);
+        scrollPane.setPrefViewportHeight(400);
+        dialog.getDialogPane().setContent(scrollPane);
+        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+        dialog.showAndWait();
+        showUsers();
+    }
+    private Button dashboardCard(String title, int count, String destination) {
+
+        Label titleLabel = new Label(title);
+
+        titleLabel.setStyle(
+                "-fx-font-size: 16px;" +
+                        "-fx-text-fill: " + PRIMARY + ";"
+        );
+
+        Label countLabel = new Label(
+                count == -1 ? "Unavailable" : String.valueOf(count)
+        );
+
+        countLabel.setStyle(
+                "-fx-font-size: 30px;" +
+                        "-fx-font-weight: bold;" +
+                        "-fx-text-fill: " + PRIMARY + ";"
+        );
+
+        VBox cardContent = new VBox(8, titleLabel, countLabel);
+        cardContent.setAlignment(Pos.CENTER);
+
+        Button card = new Button();
+        card.setGraphic(cardContent);
+
+        card.setPrefHeight(100);
+        card.setMinHeight(80);
+        card.setMaxHeight(Double.MAX_VALUE);
+
+        card.setPrefWidth(0);
+        card.setMinWidth(0);
+        card.setMaxWidth(Double.MAX_VALUE);
+
+        HBox.setHgrow(card, Priority.ALWAYS);
+
+        card.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-background-radius: 12;" +
+                        "-fx-border-color: #E5E7EB;" +
+                        "-fx-border-radius: 12;" +
+                        "-fx-cursor: hand;"
+        );
+
+        card.setOnAction(e -> showPage(destination));
+
+        return card;
+    }
+    private Button quickActionButton(String title, Runnable action) {
+
+        Button button = new Button(title);
+
+        button.setPrefHeight(40);
+        button.setMinHeight(40);
+        button.setMaxHeight(40);
+
+        button.setMinWidth(0);
+        button.setPrefWidth(0);
+        button.setMaxWidth(Double.MAX_VALUE);
+
+        HBox.setHgrow(button, Priority.ALWAYS);
+
+        button.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-text-fill: " + PRIMARY + ";" +
+                        "-fx-font-size: 14px;" +
+                        "-fx-border-color: #E5E7EB;" +
+                        "-fx-border-radius: 8;" +
+                        "-fx-background-radius: 8;" +
+                        "-fx-cursor: hand;"
+        );
+
+        button.setOnAction(e -> action.run());
+
+        return button;
+    }
 }

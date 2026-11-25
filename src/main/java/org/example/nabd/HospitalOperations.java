@@ -576,5 +576,502 @@ public class HospitalOperations {
             return false;
         }
     }
-    // ...
+    public ObservableList<ObservableList<String>> getUsers(String search, String role, String status) {
+
+        ObservableList<ObservableList<String>> data = FXCollections.observableArrayList();
+
+        String sql = "SELECT UserID, Username, FullName, Role, IsActive, PasswordResetRequested, MustChangePassword FROM Users WHERE (Username LIKE ? OR FullName LIKE ?) AND (? = 'All Roles' OR Role = ?) AND (? = 'All Status' OR IsActive = ?) ORDER BY UserID";
+
+        try (Connection con = TestConnection.makeConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setString(1, "%" + search + "%");
+            ps.setString(2, "%" + search + "%");
+
+            ps.setString(3, role);
+            ps.setString(4, role);
+
+            ps.setString(5, status);
+            ps.setBoolean(6, status.equals("Active"));
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+
+                    ObservableList<String> row =
+                            FXCollections.observableArrayList();
+
+                    for (int i = 1; i <= 7; i++) {
+                        row.add(rs.getString(i));
+                    }
+
+                    data.add(row);
+                }
+            }
+
+        } catch (SQLException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        return data;
+    }
+    public ObservableList<ObservableList<String>> getDoctorsWithoutAccounts() {
+        return getDoctorsWithoutAccounts(0);
+    }
+
+    public ObservableList<ObservableList<String>> getDoctorsWithoutAccounts(int userId) {
+
+        ObservableList<ObservableList<String>> data =
+                FXCollections.observableArrayList();
+
+        String sql = "SELECT DoctorID, FirstName, LastName, Specialization FROM Doctor WHERE UserID IS NULL OR UserID = ? ORDER BY FirstName, LastName";
+
+        try (Connection con = TestConnection.makeConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setInt(1, userId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+
+                while (rs.next()) {
+
+                    ObservableList<String> row =
+                            FXCollections.observableArrayList();
+
+                    for (int i = 1; i <= 4; i++) {
+                        row.add(rs.getString(i));
+                    }
+
+                    data.add(row);
+                }
+            }
+
+        } catch (SQLException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        return data;
+    }
+    public boolean addUser(String username, String fullName, String password, String role, boolean isActive, Integer doctorId) {
+
+        if (username == null || username.isBlank() || fullName == null || fullName.isBlank() || password == null || password.isBlank() || role == null) {
+            return false;
+        }
+
+        if (!role.equals("Administrator") && !role.equals("Receptionist") && !role.equals("Doctor")) {
+            return false;
+        }
+
+        if (role.equals("Doctor") && doctorId == null) {
+            return false;
+        }
+
+        if (!role.equals("Doctor") && doctorId != null) {
+            return false;
+        }
+
+        String passwordHash = BCrypt.hashpw(password, BCrypt.gensalt());
+
+        String sql = "INSERT INTO Users (Username, PasswordHash, FullName, Role, IsActive, MustChangePassword) VALUES (?, ?, ?, ?, ?, TRUE)";
+        try (Connection con = TestConnection.makeConnection()) {
+            con.setAutoCommit(false);
+            try (PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+
+                ps.setString(1, username.trim());
+                ps.setString(2, passwordHash);
+                ps.setString(3, fullName.trim());
+                ps.setString(4, role);
+                ps.setBoolean(5, isActive);
+
+                if (ps.executeUpdate() != 1) {
+                    con.rollback();
+                    return false;
+                }
+
+                if (role.equals("Doctor")) {
+                    int userId;
+                    try (ResultSet rs = ps.getGeneratedKeys()) {
+                        if (!rs.next()) {
+                            con.rollback();
+                            return false;
+                        }
+
+                        userId = rs.getInt(1);
+                    }
+
+                    String linkSql = "UPDATE Doctor SET UserID = ? WHERE DoctorID = ? AND UserID IS NULL";
+
+                    try (PreparedStatement linkPs = con.prepareStatement(linkSql)) {
+
+                        linkPs.setInt(1, userId);
+                        linkPs.setInt(2, doctorId);
+
+                        if (linkPs.executeUpdate() != 1) {
+                            con.rollback();
+                            return false;
+                        }
+                    }
+                }
+
+                con.commit();
+                return true;
+
+            } catch (SQLException e) {
+                con.rollback();
+                e.printStackTrace();
+                return false;
+            }
+
+        } catch (SQLException | ClassNotFoundException e) {
+
+            e.printStackTrace();
+            return false;
+        }
+    }
+    public boolean isUsernameExists(String username)
+            throws SQLException, ClassNotFoundException {
+
+        return isUsernameExists(username, 0);
+    }
+
+    public boolean isUsernameExists(String username, int userId)
+            throws SQLException, ClassNotFoundException {
+
+        String sql = "SELECT COUNT(*) FROM Users WHERE Username = ? AND UserID <> ?";
+
+        try (Connection con = TestConnection.makeConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setString(1, username.trim());
+            ps.setInt(2, userId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
+        }
+    }
+    public Integer getLinkedDoctor(int userId)
+            throws SQLException, ClassNotFoundException {
+
+        String sql = "SELECT DoctorID FROM Doctor WHERE UserID = ?";
+
+        try (Connection con = TestConnection.makeConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setInt(1, userId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+
+                if (rs.next()) {
+                    return rs.getInt("DoctorID");
+                }
+
+                return null;
+            }
+        }
+    }
+    public boolean updateUser(int userId, String username,
+                              String fullName, String role,
+                              boolean isActive, Integer doctorId) {
+
+        if (username == null || username.isBlank() ||
+                fullName == null || fullName.isBlank() ||
+                role == null) {
+            return false;
+        }
+
+        if (!role.equals("Administrator") &&
+                !role.equals("Receptionist") &&
+                !role.equals("Doctor")) {
+            return false;
+        }
+
+        if (role.equals("Doctor") && doctorId == null) {
+            return false;
+        }
+
+        if (!role.equals("Doctor") && doctorId != null) {
+            return false;
+        }
+
+        String sql = "UPDATE Users SET Username = ?, FullName = ?, Role = ?, IsActive = ? WHERE UserID = ?";
+
+        String unlinkSql = "UPDATE Doctor SET UserID = NULL WHERE UserID = ?";
+
+        String linkSql = "UPDATE Doctor SET UserID = ? WHERE DoctorID = ? AND UserID IS NULL";
+
+        try (Connection con = TestConnection.makeConnection()) {
+
+            con.setAutoCommit(false);
+
+            try (PreparedStatement ps = con.prepareStatement(sql);
+                 PreparedStatement unlinkPs = con.prepareStatement(unlinkSql);
+                 PreparedStatement linkPs = con.prepareStatement(linkSql)) {
+
+                // Protect the last active administrator
+
+                boolean lastAdmin = isLastActiveAdministrator(con, userId);
+
+                if (lastAdmin &&
+                        (!role.equals("Administrator") || !isActive)) {
+
+                    con.rollback();
+                    return false;
+                }
+
+                // Update user information
+
+                ps.setString(1, username.trim());
+                ps.setString(2, fullName.trim());
+                ps.setString(3, role);
+                ps.setBoolean(4, isActive);
+                ps.setInt(5, userId);
+
+                if (ps.executeUpdate() != 1) {
+                    con.rollback();
+                    return false;
+                }
+
+                // Remove the previous doctor link
+
+                unlinkPs.setInt(1, userId);
+                unlinkPs.executeUpdate();
+
+                // Link the account if the role is Doctor
+
+                if (role.equals("Doctor")) {
+
+                    linkPs.setInt(1, userId);
+                    linkPs.setInt(2, doctorId);
+
+                    if (linkPs.executeUpdate() != 1) {
+                        con.rollback();
+                        return false;
+                    }
+                }
+
+                con.commit();
+                return true;
+
+            } catch (SQLException e) {
+
+                con.rollback();
+                e.printStackTrace();
+                return false;
+            }
+
+        } catch (SQLException | ClassNotFoundException e) {
+
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean resetPassword(int userId, String password) {
+
+        if (password == null || password.isBlank()) {
+            return false;
+        }
+
+        if (password.getBytes(
+                java.nio.charset.StandardCharsets.UTF_8
+        ).length > 72) {
+            return false;
+        }
+
+        String passwordHash = BCrypt.hashpw(
+                password, BCrypt.gensalt()
+        );
+
+        String sql = "UPDATE Users SET PasswordHash = ?, MustChangePassword = TRUE, PasswordResetRequested = FALSE WHERE UserID = ? AND IsActive = TRUE";
+
+        try (Connection con = TestConnection.makeConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setString(1, passwordHash);
+            ps.setInt(2, userId);
+
+            return ps.executeUpdate() == 1;
+
+        } catch (SQLException | ClassNotFoundException e) {
+
+            e.printStackTrace();
+            return false;
+        }
+    }
+    public ObservableList<ObservableList<String>> getPasswordRequests() {
+
+        ObservableList<ObservableList<String>> data =
+                FXCollections.observableArrayList();
+
+        String sql = "SELECT UserID, Username, FullName, Role, IsActive FROM Users WHERE PasswordResetRequested = TRUE AND IsActive = TRUE ORDER BY UserID";
+
+        try (Connection con = TestConnection.makeConnection();
+             PreparedStatement ps = con.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+
+                ObservableList<String> row =
+                        FXCollections.observableArrayList();
+
+                for (int i = 1; i <= 5; i++) {
+                    row.add(rs.getString(i));
+                }
+
+                data.add(row);
+            }
+
+        } catch (SQLException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        return data;
+    }
+    public boolean rejectPasswordRequest(int userId) {
+
+        String sql = "UPDATE Users SET PasswordResetRequested = FALSE WHERE UserID = ? AND PasswordResetRequested = TRUE";
+
+        try (Connection con = TestConnection.makeConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setInt(1, userId);
+
+            return ps.executeUpdate() == 1;
+
+        } catch (SQLException | ClassNotFoundException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+    public boolean requestPasswordReset(String username) {
+
+        if (username == null || username.isBlank()) {
+            return false;
+        }
+
+        String sql = "UPDATE Users SET PasswordResetRequested = TRUE WHERE Username = ? AND IsActive = TRUE";
+
+        try (Connection con = TestConnection.makeConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setString(1, username.trim());
+
+            ps.executeUpdate();
+
+            return true;
+
+        } catch (SQLException | ClassNotFoundException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+    public boolean changePassword(int userId, String currentPassword, String newPassword) {
+
+        if (currentPassword == null || currentPassword.isBlank()
+                || newPassword == null || newPassword.isBlank()
+                || currentPassword.equals(newPassword)
+                || newPassword.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72) {
+            return false;
+        }
+
+        String selectSql = "SELECT PasswordHash FROM Users WHERE UserID = ? AND IsActive = TRUE AND MustChangePassword = TRUE";
+
+        String updateSql = "UPDATE Users SET PasswordHash = ?, MustChangePassword = FALSE, PasswordResetRequested = FALSE WHERE UserID = ? AND PasswordHash = ? AND IsActive = TRUE AND MustChangePassword = TRUE";
+
+        try (Connection con = TestConnection.makeConnection();
+             PreparedStatement select = con.prepareStatement(selectSql)) {
+
+            select.setInt(1, userId);
+
+            String oldHash;
+
+            try (ResultSet rs = select.executeQuery()) {
+
+                if (!rs.next()) {
+                    return false;
+                }
+
+                oldHash = rs.getString("PasswordHash");
+            }
+
+            if (!BCrypt.checkpw(currentPassword, oldHash)) {
+                return false;
+            }
+
+            String newHash = BCrypt.hashpw(newPassword, BCrypt.gensalt());
+
+            try (PreparedStatement ps = con.prepareStatement(updateSql)) {
+
+                ps.setString(1, newHash);
+                ps.setInt(2, userId);
+                ps.setString(3, oldHash);
+
+                return ps.executeUpdate() == 1;
+            }
+
+        } catch (SQLException | ClassNotFoundException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+    public int getCount(String tableName) {
+
+        if (!java.util.Set.of(
+                "Patient",
+                "Doctor",
+                "Department",
+                "Appointment",
+                "MedicalRecord",
+                "Users"
+        ).contains(tableName)) {
+            throw new IllegalArgumentException("Invalid table name.");
+        }
+
+        String sql = "SELECT COUNT(*) FROM " + tableName;
+
+        try (Connection con = TestConnection.makeConnection();
+             PreparedStatement ps = con.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+
+        } catch (SQLException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        return -1;
+    }
+    protected boolean isLastActiveAdministrator(Connection con, int userId)
+            throws SQLException {
+
+        String sql = "SELECT UserID FROM Users WHERE Role = 'Administrator' AND IsActive = TRUE ORDER BY UserID FOR UPDATE";
+
+        try (PreparedStatement ps = con.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            int count = 0;
+            boolean currentUserIsAdmin = false;
+
+            while (rs.next()) {
+
+                count++;
+
+                if (rs.getInt("UserID") == userId) {
+                    currentUserIsAdmin = true;
+                }
+            }
+
+            return currentUserIsAdmin && count == 1;
+        }
+    }
+
+    public boolean isLastActiveAdministrator(int userId)
+            throws SQLException, ClassNotFoundException {
+
+        try (Connection con = TestConnection.makeConnection()) {
+            return isLastActiveAdministrator(con, userId);
+        }
+    }
 }
