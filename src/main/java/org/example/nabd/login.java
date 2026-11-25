@@ -224,19 +224,39 @@ public class login {
 
     private String checkLogin(String username, String password) {
 
-        String sql = "SELECT passwordhash, role FROM Users " + "WHERE username = '" + username + "' AND isactive = 1";
+        String sql = "SELECT u.UserID, u.PasswordHash, u.Role, d.DoctorID "
+                + "FROM Users u "
+                + "LEFT JOIN Doctor d ON u.UserID = d.UserID "
+                + "WHERE u.Username = ? AND u.IsActive = 1";
 
         try (Connection con = TestConnection.makeConnection();
-             Statement st = con.createStatement();
-             ResultSet rs = st.executeQuery(sql)) {
+             PreparedStatement ps = con.prepareStatement(sql)) {
 
-            if (rs.next()) {
+            ps.setString(1, username);
 
-                String storedHash = rs.getString("passwordhash");
-                String role = rs.getString("role");
+            try (ResultSet rs = ps.executeQuery()) {
 
-                if (storedHash != null && BCrypt.checkpw(password, storedHash)) {
-                    return role;
+                if (rs.next()) {
+
+                    String storedHash = rs.getString("PasswordHash");
+                    String role = rs.getString("Role");
+
+                    if (storedHash != null &&
+                            BCrypt.checkpw(password, storedHash)) {
+
+                        Integer doctorId =
+                                rs.getObject("DoctorID", Integer.class);
+
+                        if ("Doctor".equals(role) && doctorId == null) {
+                            return null;
+                        }
+                        TestConnection.setCurrentUser(
+                                rs.getInt("UserID"),
+                                role,
+                                doctorId
+                        );
+                        return role;
+                    }
                 }
             }
 

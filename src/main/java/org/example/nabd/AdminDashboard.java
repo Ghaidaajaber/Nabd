@@ -41,8 +41,8 @@ public class AdminDashboard {
 
     private void createSidebar() {
 
-        VBox logoBox = UIComponents.createLogo(140, 140);
-        logoBox.setPadding(new Insets(0, 0, 30, 5));
+        VBox logoBox = UIComponents.createLogo(110, 110);
+        logoBox.setPadding(new Insets(0, 0, 10, 5));
 
         Button dashboard = UIComponents.menuButton("Dashboard");
         Button departments = UIComponents.menuButton("Departments");
@@ -60,7 +60,7 @@ public class AdminDashboard {
         medicalRecords.setOnAction(e -> showPage("Medical Records"));
         users.setOnAction(e -> showPage("Users"));
 
-        menu = new VBox(8, dashboard, departments, doctors, patients, appointments, medicalRecords, users);
+        menu = new VBox(5, dashboard, departments, doctors, patients, appointments, medicalRecords, users);
 
         VBox.setVgrow(menu, Priority.ALWAYS);
 
@@ -70,7 +70,7 @@ public class AdminDashboard {
 
         VBox sidebar = new VBox(10, logoBox, menu, logout);
 
-        sidebar.setPadding(new Insets(30, 15, 25, 15));
+        sidebar.setPadding(new Insets(15, 15, 15, 15));
         sidebar.setPrefWidth(240);
         sidebar.setMinWidth(240);
 
@@ -78,7 +78,6 @@ public class AdminDashboard {
 
         root.setLeft(sidebar);
     }
-
 
     // ================= HEADER =================
 
@@ -1342,7 +1341,9 @@ public class AdminDashboard {
         ObservableList<ObservableList<String>> doctors =
                 operations.getDoctorsWithoutAccounts(userId);
 
+
         ContextMenu doctorSuggestions = new ContextMenu();
+        doctorSuggestions.setAutoHide(false);
 
         Integer[] selectedDoctorId = {null};
         boolean[] selectingDoctor = {false};

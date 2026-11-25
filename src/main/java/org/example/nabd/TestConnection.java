@@ -9,6 +9,9 @@ import javafx.stage.Stage;
 public class TestConnection extends Application {
     private static Stage mainStage;
     private static AdminDashboard adminDashboard;
+    private static Integer currentUserId;
+    private static Integer currentDoctorId;
+    private static String currentRole;
 
     public static void main(String[] args) {
         launch(args);
@@ -55,15 +58,36 @@ public class TestConnection extends Application {
     }
     public static void openLogin() {
 
+        currentUserId = null;
+        currentDoctorId = null;
+        currentRole = null;
+        adminDashboard = null;
         mainStage.setTitle("Nabd - Login");
-
         mainStage.setScene(new login().createScene());
-
     }
+
     public static void openAdminPage(String pageName) {
         if (adminDashboard != null) {
             adminDashboard.showPage(pageName);
         }
     }
 
+    public static void setCurrentUser(int userId, String role,
+                                      Integer doctorId) {
+
+        currentUserId = userId;
+        currentRole = role;
+        currentDoctorId = doctorId;
+    }
+    public static Integer getCurrentUserId() {
+        return currentUserId;
+    }
+
+    public static Integer getCurrentDoctorId() {
+        return currentDoctorId;
+    }
+
+    public static String getCurrentRole() {
+        return currentRole;
+    }
 }
