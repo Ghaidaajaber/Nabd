@@ -1074,6 +1074,21 @@ public class HospitalOperations {
             return false;
         }
 
+        // Only administrators can manage users
+
+        if (!"Administrator".equals(TestConnection.getCurrentRole())) {
+            return false;
+        }
+
+        // Protect the currently logged-in administrator
+
+        if (java.util.Objects.equals(
+                TestConnection.getCurrentUserId(), userId) &&
+                (!role.equals("Administrator") || !isActive)) {
+
+            return false;
+        }
+
         if (role.equals("Doctor") && doctorId == null) {
             return false;
         }
