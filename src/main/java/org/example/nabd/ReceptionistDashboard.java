@@ -1,5 +1,6 @@
 package org.example.nabd;
 
+import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -8,6 +9,9 @@ import javafx.scene.Node;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.collections.ObservableList;
 import javafx.geometry.Pos;
+
+import java.time.LocalDate;
+
 public class ReceptionistDashboard {
 
     private BorderPane root;
@@ -120,7 +124,136 @@ public class ReceptionistDashboard {
                         "-fx-text-fill: #777777;"
         );
 
-        VBox dashboardContent = new VBox(15, welcome, description);
+        HospitalOperations operations = new HospitalOperations();
+
+        ObservableList<ObservableList<String>> todayAppointments =
+                operations.getAppointments(
+                        "PatientName",
+                        "",
+                        "All Status",
+                        LocalDate.now()
+                );
+
+        long total = todayAppointments.size();
+
+        long scheduled = todayAppointments.stream()
+                .filter(row -> "Scheduled".equals(row.get(6)))
+                .count();
+
+        long completed = todayAppointments.stream()
+                .filter(row -> "Completed".equals(row.get(6)))
+                .count();
+
+        long cancelled = todayAppointments.stream()
+                .filter(row -> "Cancelled".equals(row.get(6)))
+                .count();
+
+        HBox stats = new HBox(15,
+
+                UIComponents.createStatCard(
+                        "Today's Appointments", total, PRIMARY),
+
+                UIComponents.createStatCard(
+                        "Scheduled", scheduled, "#2563EB"),
+
+                UIComponents.createStatCard(
+                        "Completed", completed, "#16803C"),
+
+                UIComponents.createStatCard(
+                        "Cancelled", cancelled, "#B91C1C")
+        );
+
+        Button addPatient = UIComponents.createPrimaryButton(
+                "+ Add Patient"
+        );
+
+        Button addAppointment = UIComponents.createPrimaryButton(
+                "+ Add Appointment"
+        );
+
+        addPatient.setOnAction(e -> {
+
+            if (UIComponents.showPatientDialog(null) > 0) {
+                showDashboard();
+            }
+
+        });
+
+        addAppointment.setOnAction(e -> UIComponents.showAppointmentDialog(null, this::showDashboard)
+        );
+
+        addPatient.setMaxWidth(Double.MAX_VALUE);
+        addAppointment.setMaxWidth(Double.MAX_VALUE);
+
+        HBox.setHgrow(addPatient, Priority.ALWAYS);
+        HBox.setHgrow(addAppointment, Priority.ALWAYS);
+
+        addPatient.setMinWidth(0);
+        addPatient.setPrefWidth(0);
+
+        addAppointment.setMinWidth(0);
+        addAppointment.setPrefWidth(0);
+
+        HBox quickActions = new HBox(15, addPatient, addAppointment);
+
+        Label tableTitle = new Label("Today's Appointments");
+
+        tableTitle.setStyle(
+                "-fx-font-size: 20px;" +
+                        "-fx-font-weight: bold;" +
+                        "-fx-text-fill: " + PRIMARY + ";"
+        );
+
+        String[] columnNames = {
+                "Time",
+                "Patient",
+                "Doctor",
+                "Status"
+        };
+
+        TableView<ObservableList<String>> todayTable = UIComponents.createTable(columnNames, false);
+
+        ObservableList<ObservableList<String>> tableData =
+                FXCollections.observableArrayList();
+
+        for (ObservableList<String> row : todayAppointments) {
+
+            tableData.add(FXCollections.observableArrayList(
+                    row.get(4),
+                    row.get(1),
+                    row.get(2),
+                    row.get(6)
+            ));
+        }
+
+        todayTable.setItems(tableData);
+
+        todayTable.setPrefHeight(300);
+
+        todayTable.setColumnResizePolicy(
+                TableView.CONSTRAINED_RESIZE_POLICY
+        );
+
+        todayTable.setPlaceholder(
+                new Label("No appointments scheduled for today.")
+        );
+
+        VBox appointmentsCard = new VBox(15, tableTitle, todayTable);
+
+        appointmentsCard.setPadding(new Insets(20));
+
+        appointmentsCard.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-background-radius: 10;" +
+                        "-fx-border-color: #E2E8F0;" +
+                        "-fx-border-radius: 10;"
+        );
+
+        VBox dashboardContent = new VBox(20, welcome, description, stats, quickActions,
+                appointmentsCard
+        );
+
+        setContent(dashboardContent);
 
         setContent(dashboardContent);
     }
@@ -218,6 +351,16 @@ public class ReceptionistDashboard {
 
         table.setItems(operations.getData("Doctor"));
 
+        TableColumn<ObservableList<String>, Void> scheduleColumn =
+                UIComponents.createActionColumn(
+                        "View Schedule",
+                        row -> showDoctorSchedule(row)
+                );
+
+        scheduleColumn.setText("Schedule");
+
+        table.getColumns().add(scheduleColumn);
+
         UIComponents.setupSearch(
                 table, searchBy, searchField, "Doctor"
         );
@@ -226,6 +369,90 @@ public class ReceptionistDashboard {
         page.setPadding(new Insets(20));
 
         setContent(page);
+    }
+
+    private void showDoctorSchedule(ObservableList<String> row) {
+
+        String doctorId = row.get(0);
+        String doctorName = row.get(1) + " " + row.get(2);
+
+        Dialog<Void> dialog = new Dialog<>();
+
+        dialog.setTitle("Doctor's Schedule");
+        dialog.setHeaderText("Dr. " + doctorName);
+
+        DatePicker datePicker = new DatePicker(LocalDate.now());
+
+        HBox dateBox = new HBox(
+                10, new Label("Select Date:"), datePicker
+        );
+
+        dateBox.setAlignment(Pos.CENTER_LEFT);
+
+        String[] columns = {
+                "Time", "Patient", "Status"
+        };
+
+        TableView<ObservableList<String>> table =
+                UIComponents.createTable(columns, false);
+
+        table.setPrefHeight(350);
+
+        HospitalOperations operations = new HospitalOperations();
+
+        Runnable refresh = () -> {
+
+            table.getItems().clear();
+
+            if (datePicker.getValue() == null) {
+                return;
+            }
+
+            ObservableList<ObservableList<String>> appointments =
+                    operations.getAppointments(
+                            "DoctorName",
+                            "",
+                            "All Status",
+                            datePicker.getValue()
+                    );
+
+            for (ObservableList<String> appointment : appointments) {
+
+                if (doctorId.equals(appointment.get(8))) {
+
+                    table.getItems().add(
+                            FXCollections.observableArrayList(
+                                    appointment.get(4),
+                                    appointment.get(1),
+                                    appointment.get(6)
+                            )
+                    );
+                }
+            }
+        };
+
+        datePicker.valueProperty().addListener(
+                (obs, oldValue, newValue) -> refresh.run()
+        );
+
+        table.setPlaceholder(
+                new Label("No appointments for this date")
+        );
+
+        refresh.run();
+
+        VBox form = new VBox(15, dateBox, table);
+
+        form.setPadding(new Insets(20));
+
+        dialog.getDialogPane().setPrefWidth(600);
+        dialog.getDialogPane().setContent(form);
+
+        dialog.getDialogPane().getButtonTypes().add(
+                ButtonType.CLOSE
+        );
+
+        dialog.showAndWait();
     }
 
     private void showPatients() {
